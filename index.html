@@ -3,12 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 股市雷达 - 实时行情版</title>
+    <title>AI 股市雷达</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index-dark.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
+        /* --- 核心修复：防止刷新出现乱码 --- */
+        [v-cloak] {
+            display: none !important;
+        }
+
+        /* --- 初始加载遮罩层 (Loading) --- */
+        #global-loader {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #f8fafc; /* 白天背景 */
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            transition: opacity 0.5s ease;
+        }
+        /* 夜间模式 Loading 背景适配 */
+        @media (prefers-color-scheme: dark) {
+            #global-loader { background-color: #020617; } /* 如果系统默认是黑夜 */
+        }
+        /* 强制跟随 JS 逻辑 */
+        html.dark #global-loader { background-color: #020617; }
+        
+        .loader-spinner {
+            width: 44px; height: 44px;
+            border: 4px solid rgba(99, 102, 241, 0.15);
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Loading 文字样式 */
+        .loader-text {
+            margin-top: 16px;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.15em;
+            font-family: -apple-system, "PingFang SC", sans-serif;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
         /* --- 变量定义 --- */
         :root {
             --bg-body: #f8fafc;
@@ -49,7 +94,7 @@
             font-weight: 900;
         }
 
-        /* --- 日期选择器定制 --- */
+        /* --- 日期选择器深度定制 --- */
         .custom-picker .el-input__wrapper {
             background: transparent !important;
             box-shadow: none !important;
@@ -98,7 +143,7 @@
         }
         .gradient-btn:hover { box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); transform: scale(1.02); }
 
-        /* --- 卡片 (可点击) --- */
+        /* --- 卡片 --- */
         .stock-card {
             background: var(--card-bg);
             backdrop-filter: blur(24px);
@@ -111,23 +156,19 @@
             height: auto;      
             transition: all 0.3s;
             position: relative;
-            cursor: pointer; /* 关键：变成手型光标 */
+            cursor: pointer;
         }
         .stock-card:hover {
             transform: translateY(-5px);
-            border-color: rgba(99, 102, 241, 0.8); /* 悬浮时边框更明显 */
-            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.15); /* 增加紫色氛围光 */
+            border-color: rgba(99, 102, 241, 0.8);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.15);
         }
-        /* 点击时的微缩效果 */
-        .stock-card:active {
-            transform: translateY(-2px) scale(0.99);
-        }
+        .stock-card:active { transform: translateY(-2px) scale(0.99); }
 
         .reason-box { flex: 1; margin: 20px 0; }
         .reason-text { font-size: 15px; line-height: 1.75; color: var(--text-secondary); font-style: italic; text-align: justify; }
 
         .card-footer { margin-top: auto; padding-top: 20px; border-top: 1px dashed var(--card-border); }
-
         .tag-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
 
         .theme-float-btn {
@@ -150,7 +191,6 @@
         }
         .theme-float-btn:hover { background: rgba(99,102,241,0.1); transform: rotate(15deg); }
 
-        /* 链接提示图标 (可选) */
         .external-link-icon {
             position: absolute;
             top: 28px;
@@ -159,15 +199,17 @@
             transition: opacity 0.3s, transform 0.3s;
             color: #6366f1;
         }
-        .stock-card:hover .external-link-icon {
-            opacity: 1;
-            transform: translate(2px, -2px);
-        }
+        .stock-card:hover .external-link-icon { opacity: 1; transform: translate(2px, -2px); }
 
-        [v-cloak] { display: none; }
+        [v-cloak] { display: none !important; }
     </style>
 </head>
 <body>
+
+<div id="global-loader">
+    <div class="loader-spinner"></div>
+    <p class="loader-text">AI 引擎初始化中...</p>
+</div>
 
 <div id="app" v-cloak class="min-h-screen w-full flex flex-col items-center py-10 px-6">
     
@@ -303,22 +345,12 @@
                 return '#ef4444';
             };
 
-            // 核心：跳转逻辑
             const goToQuote = (code) => {
-                // 简单的市场判断逻辑
-                // 6/9开头为沪市 (SH)，0/2/3开头为深市 (SZ)，4/8开头为北交所 (BJ)
                 let market = 'SH';
-                if (code.startsWith('6') || code.startsWith('9')) {
-                    market = 'SH';
-                } else if (code.startsWith('0') || code.startsWith('2') || code.startsWith('3')) {
-                    market = 'SZ';
-                } else if (code.startsWith('4') || code.startsWith('8')) {
-                    market = 'BJ';
-                }
-                
-                // 拼接雪球 URL
-                const url = `https://xueqiu.com/S/${market}${code}`;
-                window.open(url, '_blank');
+                if (code.startsWith('6') || code.startsWith('9')) { market = 'SH'; } 
+                else if (code.startsWith('0') || code.startsWith('2') || code.startsWith('3')) { market = 'SZ'; } 
+                else if (code.startsWith('4') || code.startsWith('8')) { market = 'BJ'; }
+                window.open(`https://xueqiu.com/S/${market}${code}`, '_blank');
             };
 
             const fetchData = async () => {
@@ -336,7 +368,17 @@
             };
 
             onMounted(() => {
+                // 移除 Loading
+                setTimeout(() => {
+                    const loader = document.getElementById('global-loader');
+                    if(loader) {
+                        loader.style.opacity = '0';
+                        setTimeout(() => loader.remove(), 500);
+                    }
+                }, 400);
+
                 fetchData();
+
                 const style = document.createElement('style');
                 style.innerHTML = `
                     @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
