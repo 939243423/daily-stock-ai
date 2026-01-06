@@ -96,13 +96,28 @@
                     todayRecommendations.stocks.forEach(stock => {
                         const card = document.createElement('div');
                         card.className = 'glass-card flex flex-col justify-between transform hover:scale-102 transition duration-300 ease-in-out';
+                        // card.innerHTML = `
+                        //     <div>
+                        //         <h3 class="text-2xl font-bold text-blue-300 mb-2">${stock.name} (${stock.code})</h3>
+                        //         <p class="text-gray-300 text-sm mb-4 leading-relaxed">${stock.reason}</p>
+                        //     </div>
+                        //     <div class="mt-4 text-sm text-gray-400">
+                        //         <span class="font-semibold">风险提示:</span> ${stock.risk || '请注意投资风险。'}
+                        //     </div>
+                        // `;
                         card.innerHTML = `
                             <div>
-                                <h3 class="text-2xl font-bold text-blue-300 mb-2">${stock.name} (${stock.code})</h3>
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="text-2xl font-bold text-blue-300">${stock.name}</h3>
+                                    <span class="bg-blue-900 text-blue-200 text-xs font-bold px-2 py-1 rounded">${stock.code}</span>
+                                </div>
+                                <div class="w-full bg-gray-700 rounded-full h-1.5 mb-4">
+                                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 rounded-full" style="width: ${stock.score}%"></div>
+                                </div>
                                 <p class="text-gray-300 text-sm mb-4 leading-relaxed">${stock.reason}</p>
                             </div>
-                            <div class="mt-4 text-sm text-gray-400">
-                                <span class="font-semibold">风险提示:</span> ${stock.risk || '请注意投资风险。'}
+                            <div class="mt-auto pt-4 border-t border-gray-700 text-xs text-gray-400">
+                                <span class="text-red-400 font-semibold">⚠️ 风险：</span> ${stock.risk}
                             </div>
                         `;
                         stockCardsContainer.appendChild(card);
