@@ -3,77 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 股市雷达 - 专业版</title>
+    <title>AI 股市雷达 - 多模式版</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://tdesign.gtimg.com/site/spline/index.css" />
     <style>
+        /* 定义暗黑/白天模式变量 */
         :root {
-            --td-brand-color: #0052d9;
-            --td-bg-color-container: #181818;
+            --bg-main: #f3f4f6;
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --input-bg: #ffffff;
+            --brand-color: #0052d9;
         }
+
+        .dark {
+            --bg-main: #0a0a0a;
+            --bg-card: rgba(24, 24, 24, 0.8);
+            --text-main: #ffffff;
+            --text-sub: #9ca3af;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --input-bg: #1e1e1e;
+        }
+
         body {
-            background-color: #0a0a0a;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(0, 82, 217, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(107, 70, 193, 0.1) 0px, transparent 50%);
-            color: #ffffff;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
         }
+
         .t-card {
-            background: rgba(24, 24, 24, 0.8);
+            background: var(--bg-card);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.3s cubic-bezier(0.38, 0, 0.24, 1);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
         }
-        .t-card:hover {
-            border-color: var(--td-brand-color);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-            transform: translateY(-5px);
+
+        .td-input {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
         }
-        /* 模拟 TDesign DatePicker 样式 */
-        .td-input-picker {
-            background: #1e1e1e;
-            border: 1px solid #383838;
-            color: #eee;
-            transition: all 0.2s;
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: var(--calendar-filter, none);
         }
-        .td-input-picker:focus {
-            border-color: var(--td-brand-color);
-            box-shadow: 0 0 0 2px rgba(0, 82, 217, 0.2);
+        .dark input[type="date"]::-webkit-calendar-picker-indicator {
+            --calendar-filter: invert(1);
         }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+        /* 切换按钮样式 */
+        #theme-toggle {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
     </style>
 </head>
-<body class="min-h-screen py-10 px-4">
+<body class="dark min-h-screen py-10 px-4">
+
+    <button id="theme-toggle" class="p-3 rounded-full bg-blue-600 text-white hover:scale-110 transition-transform">
+        <span id="theme-icon">🌞</span>
+    </button>
 
     <header class="max-w-6xl mx-auto text-center mb-12">
         <h1 class="text-5xl font-bold tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-400">
             AI 股市雷达
         </h1>
-        <p class="text-gray-500 text-sm uppercase tracking-[0.3em]">Institutional Grade AI Analysis System</p>
+        <p class="text-sm uppercase tracking-[0.3em] opacity-60">Multi-Model Analysis System</p>
     </header>
 
     <main class="max-w-6xl mx-auto">
         <div class="t-card rounded-xl p-5 mb-10 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-                <span class="text-gray-400 text-sm">观测日期</span>
-                <input type="date" id="date-selector" class="td-input-picker rounded px-4 py-1.5 outline-none text-sm w-44">
+                <span class="opacity-70 text-sm font-medium">观测日期</span>
+                <input type="date" id="date-selector" class="td-input rounded-md px-4 py-1.5 outline-none text-sm w-44">
             </div>
-            <button id="view-history-btn" class="bg-[#0052d9] hover:bg-[#1464e8] text-white px-8 py-2 rounded text-sm font-medium transition-all active:opacity-80">
-                同步最新策略
+            <button id="view-history-btn" class="bg-[#0052d9] hover:bg-[#1464e8] text-white px-8 py-2 rounded text-sm font-medium transition-all shadow-lg shadow-blue-500/20">
+                同步策略
             </button>
         </div>
 
         <section id="recommendations-section">
             <div class="flex items-center gap-3 mb-8">
-                <div class="w-1 h-6 bg-blue-600"></div>
-                <h2 id="current-date-display" class="text-xl font-bold text-gray-200">加载中...</h2>
+                <div class="w-1.5 h-6 bg-blue-600 rounded-full"></div>
+                <h2 id="current-date-display" class="text-2xl font-bold">加载中...</h2>
             </div>
             
-            <div id="stock-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div id="stock-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 </div>
 
-            <div id="no-data-message" class="hidden py-32 text-center text-gray-600 border border-dashed border-gray-800 rounded-xl">
+            <div id="no-data-message" class="hidden py-32 text-center opacity-40 border-2 border-dashed border-current rounded-xl">
                 暂无该日期的 AI 策略备份
             </div>
         </section>
@@ -84,11 +107,20 @@
         const viewHistoryBtn = document.getElementById('view-history-btn');
         const container = document.getElementById('stock-cards-container');
         const dateDisplay = document.getElementById('current-date-display');
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+
+        // 主题切换逻辑
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            themeIcon.innerText = isDark ? '🌞' : '🌙';
+        });
 
         dateSelector.value = new Date().toISOString().split('T')[0];
 
         async function render(date) {
-            container.innerHTML = '<div class="col-span-full text-center py-20 text-gray-500">正在调取决策数据...</div>';
+            container.innerHTML = '<div class="col-span-full text-center py-20 opacity-50 animate-pulse">调取云端策略中...</div>';
             
             try {
                 const res = await fetch('data/history.json');
@@ -108,43 +140,41 @@
 
                 dayData.stocks.forEach(stock => {
                     const card = document.createElement('div');
-                    // 核心：h-full + flex-col 确保垂直对齐
-                    card.className = 't-card rounded-xl p-6 flex flex-col h-full min-h-[520px]';
+                    card.className = 't-card rounded-2xl p-7 flex flex-col h-full min-h-[540px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-2';
                     card.innerHTML = `
-                        <div class="flex gap-2 mb-4">
-                            <span class="px-2 py-0.5 bg-blue-500/10 text-blue-500 text-[10px] border border-blue-500/20 rounded">沪深主板</span>
-                            <span class="px-2 py-0.5 bg-orange-500/10 text-orange-500 text-[10px] border border-orange-500/20 rounded">主力异动</span>
-                            <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[10px] border border-emerald-500/20 rounded">低估值</span>
+                        <div class="flex gap-2 mb-5">
+                            <span class="px-2 py-0.5 bg-blue-500/10 text-blue-500 text-[10px] font-bold border border-blue-500/20 rounded">沪深主板</span>
+                            <span class="px-2 py-0.5 bg-orange-500/10 text-orange-500 text-[10px] font-bold border border-orange-500/20 rounded">主力异动</span>
+                            <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 rounded">低估值</span>
                         </div>
 
                         <div class="mb-5">
-                            <h3 class="text-2xl font-bold text-white tracking-tight">${stock.name}</h3>
-                            <p class="text-gray-500 font-mono text-xs mt-1 uppercase">${stock.code}</p>
+                            <h3 class="text-3xl font-bold tracking-tight">${stock.name}</h3>
+                            <p class="opacity-40 font-mono text-sm mt-1">${stock.code}</p>
                         </div>
 
-                        <div class="mb-6">
-                            <div class="flex justify-between text-[10px] text-gray-500 mb-1.5 uppercase font-medium">
+                        <div class="mb-8">
+                            <div class="flex justify-between text-[10px] opacity-50 mb-2 font-bold uppercase">
                                 <span>AI Confidence Index</span>
                                 <span>${stock.score}%</span>
                             </div>
-                            <div class="w-full bg-gray-800 rounded-full h-1 overflow-hidden">
-                                <div class="bg-blue-600 h-full transition-all duration-1000" style="width: ${stock.score}%"></div>
+                            <div class="w-full bg-gray-500/20 rounded-full h-1.5 overflow-hidden">
+                                <div class="bg-blue-600 h-full shadow-[0_0_10px_rgba(37,99,235,0.4)]" style="width: ${stock.score}%"></div>
                             </div>
                         </div>
 
-                        <div class="flex-1 mb-6">
-                            <p class="text-gray-300 text-sm leading-relaxed italic opacity-90">
-                                “${stock.reason}”
+                        <div class="flex-grow mb-8 text-lg">
+                            <p class="leading-relaxed italic opacity-90">
+                                <span class="text-blue-500 font-bold not-italic">解析：</span>“${stock.reason}”
                             </p>
                         </div>
 
-                        <div class="pt-5 border-t border-white/5">
-                            <div class="flex gap-2">
-                                <div class="w-1.5 h-1.5 rounded-full bg-red-600 mt-1.5 shrink-0 shadow-[0_0_8px_rgba(220,38,38,0.5)]"></div>
-                                <p class="text-[11px] text-gray-500 leading-normal">
-                                    <span class="text-gray-400 font-bold mr-1">RISK:</span>${stock.risk}
-                                </p>
-                            </div>
+                        <div class="pt-6 border-t border-current opacity-20"></div>
+                        <div class="flex gap-3">
+                            <div class="w-2 h-2 rounded-full bg-red-600 mt-1.5 shrink-0 animate-pulse"></div>
+                            <p class="text-[12px] opacity-60 leading-relaxed">
+                                <b class="mr-1">风险提示:</b>${stock.risk}
+                            </p>
                         </div>
                     `;
                     container.appendChild(card);
