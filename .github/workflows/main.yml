@@ -1,0 +1,28 @@
+name: Daily Update
+on:
+  schedule:
+    - cron: '0 1 * * 1-5' # 周一至周五，UTC时间 1:00 (北京时间 9:00)
+  workflow_dispatch: # 允许手动点按钮测试
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install google-generativeai
+      - name: Run analysis
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python analyze.py
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "action@github.com"
+          git add data/history.json
+          git commit -m "Update stock data"
+          git push
