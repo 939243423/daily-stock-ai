@@ -32,6 +32,7 @@ jobs:
         env:
           # 确保你在 Repository Secrets 中配置了 GEMINI_API_KEY
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }} # 新增deepseek
         run: python analyze.py
 
       - name: Commit and Push Data
