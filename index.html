@@ -3,58 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 股市推荐 - 每日智能分析</title>
+    <title>AI 股市雷达 - 每日智能分析</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 自定义 Tailwind 配置，添加毛玻璃效果 */
         @layer base {
             body {
-                @apply bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 font-sans;
+                background-color: #0f172a;
+                background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 75%);
+                @apply text-gray-100 font-sans;
             }
             .glass-card {
-                @apply bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg border border-gray-700 rounded-xl shadow-lg p-6;
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(16px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                @apply rounded-2xl shadow-2xl p-6;
             }
-            .glass-input {
-                @apply bg-white bg-opacity-5 backdrop-filter backdrop-blur-sm border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500;
+            /* 美化日期控件 */
+            input[type="date"]::-webkit-calendar-picker-indicator {
+                filter: invert(1);
+                cursor: pointer;
             }
+        }
+        .recommendation-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .recommendation-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(255, 255, 255, 0.08);
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-12 px-4">
 
-    <header class="text-center mb-12">
-        <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-4 animate-fade-in">
+    <header class="text-center mb-16">
+        <h1 class="text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-600 mb-4">
             AI 股市雷达
         </h1>
-        <p class="text-xl text-gray-300 animate-slide-up">
-            Gemini 3 Pro 每日智能精选，助力你的投资决策。
+        <p class="text-lg text-gray-400 font-light tracking-widest uppercase">
+            Professional Analysis • Gemini 3 Pro Driven
         </p>
     </header>
 
-    <main class="w-full max-w-4xl">
-        <div class="glass-card mb-8 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <label for="date-selector" class="text-lg font-medium">查看日期:</label>
-            <input type="date" id="date-selector" class="glass-input w-48 text-center text-lg">
-            <button id="view-history-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
-                查看推荐
+    <main class="w-full max-w-5xl">
+        <div class="glass-card mb-12 flex flex-col sm:flex-row items-center justify-between gap-6 border-blue-500/20">
+            <div class="flex items-center gap-4">
+                <label for="date-selector" class="text-gray-400 text-sm font-bold uppercase tracking-wider">观测日期</label>
+                <input type="date" id="date-selector" 
+                       class="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+            </div>
+            <button id="view-history-btn" 
+                    class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-10 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95">
+                同步策略
             </button>
         </div>
 
-        <section id="recommendations-section" class="space-y-8">
-            <h2 id="current-date-display" class="text-3xl font-bold text-gray-200 mb-6 text-center"></h2>
-            <div id="stock-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <p id="loading-message" class="col-span-full text-center text-xl text-gray-400">
-                    正在加载数据... <br> (如果第一次加载或定时任务未更新，可能显示为空，请稍候)
+        <section id="recommendations-section">
+            <h2 id="current-date-display" class="text-2xl font-bold text-gray-300 mb-8 pl-4 border-l-4 border-blue-500"></h2>
+            
+            <div id="stock-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <p id="loading-message" class="col-span-full text-center py-20 text-blue-400 animate-pulse text-lg">
+                    正在调取 AI 决策引擎数据...
                 </p>
             </div>
-            <p id="no-data-message" class="col-span-full text-center text-xl text-red-400 hidden">
-                抱歉，该日期没有推荐数据。
-            </p>
+            
+            <div id="no-data-message" class="hidden col-span-full text-center py-20 bg-gray-900/30 rounded-3xl border border-dashed border-gray-800">
+                <p class="text-gray-500 text-xl font-light">暂无该日期的策略备份</p>
+            </div>
         </section>
     </main>
 
-    <footer class="mt-16 text-gray-400 text-sm">
-        &copy; 2026 AI 股市雷达. Powered by Gemini 3 Pro.
+    <footer class="mt-24 text-gray-600 text-[10px] tracking-[0.2em] uppercase text-center">
+        &copy; 2026 AI Radar System • Standard Edition
     </footer>
 
     <script>
@@ -64,9 +84,8 @@
         const stockCardsContainer = document.getElementById('stock-cards-container');
         const loadingMessage = document.getElementById('loading-message');
         const noDataMessage = document.getElementById('no-data-message');
-        let allRecommendations = {}; // 用于存储所有加载的历史数据
+        let allRecommendations = {};
 
-        // 初始化日期选择器为今天
         function getTodayDateString() {
             const today = new Date();
             return today.toISOString().split('T')[0];
@@ -77,51 +96,57 @@
         async function loadRecommendations(selectedDate) {
             loadingMessage.classList.remove('hidden');
             noDataMessage.classList.add('hidden');
-            stockCardsContainer.innerHTML = ''; // 清空之前的卡片
+            stockCardsContainer.innerHTML = '';
 
             try {
-                // 如果是第一次加载或者需要刷新数据，则从文件获取
                 if (Object.keys(allRecommendations).length === 0 || selectedDate === getTodayDateString()) {
                     const response = await fetch('data/history.json');
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     allRecommendations = await response.json();
                 }
 
-                currentDateDisplay.textContent = `${selectedDate} 推荐股票`;
+                currentDateDisplay.textContent = `${selectedDate} 策略精选`;
                 const todayRecommendations = allRecommendations[selectedDate];
 
                 if (todayRecommendations && todayRecommendations.stocks && todayRecommendations.stocks.length > 0) {
                     todayRecommendations.stocks.forEach(stock => {
                         const card = document.createElement('div');
-                        card.className = 'glass-card flex flex-col justify-between transform hover:scale-102 transition duration-300 ease-in-out';
-                        // 在 index.html 中替换卡片生成的 HTML 逻辑
-                        card.innerHTML = `
-                            <div class="relative overflow-hidden">
-                                <div class="flex gap-2 mb-3">
-                                    <span class="px-2 py-0.5 bg-emerald-900/50 text-emerald-400 text-[10px] border border-emerald-500/30 rounded">沪深主板</span>
-                                    <span class="px-2 py-0.5 bg-amber-900/50 text-amber-400 text-[10px] border border-amber-500/30 rounded">主力异动</span>
-                                    <span class="px-2 py-0.5 bg-blue-900/50 text-blue-400 text-[10px] border border-blue-500/30 rounded">低估值</span>
-                                </div>
-                                
-                                <h3 class="text-2xl font-bold text-white mb-1">${stock.name}</h3>
-                                <p class="text-sm text-gray-500 mb-4 font-mono">${stock.code}</p>
-                                
-                                <div class="mb-4">
-                                    <div class="flex justify-between text-[10px] text-gray-400 mb-1">
-                                        <span>AI 综合评分</span>
-                                        <span>${stock.score}%</span>
-                                    </div>
-                                    <div class="w-full bg-gray-800 rounded-full h-1">
-                                        <div class="bg-gradient-to-r from-emerald-500 to-blue-500 h-1 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" style="width: ${stock.score}%"></div>
-                                    </div>
-                                </div>
+                        // 关键修改：flex-col + min-h 保证对齐
+                        card.className = 'recommendation-card glass-card flex flex-col min-h-[480px]';
                         
-                                <p class="text-gray-300 text-sm leading-relaxed mb-4 italic">“${stock.reason}”</p>
-                                
-                                <div class="pt-3 border-t border-gray-800">
-                                    <p class="text-[11px] text-gray-500"><span class="text-red-900 font-bold">●</span> 风险提示：${stock.risk}</p>
+                        card.innerHTML = `
+                            <div class="flex gap-2 mb-4">
+                                <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20 rounded">沪深主板</span>
+                                <span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[10px] border border-blue-500/20 rounded">主力异动</span>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <h3 class="text-3xl font-black text-white">${stock.name}</h3>
+                                <p class="text-xs font-mono text-gray-500 tracking-widest uppercase mt-1">${stock.code}</p>
+                            </div>
+                            
+                            <div class="mb-6">
+                                <div class="flex justify-between text-[10px] text-gray-400 mb-1.5 font-bold uppercase">
+                                    <span>AI Confidence</span>
+                                    <span>${stock.score}%</span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-1 overflow-hidden">
+                                    <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" style="width: ${stock.score}%"></div>
+                                </div>
+                            </div>
+                    
+                            <div class="flex-grow">
+                                <p class="text-gray-200 text-sm leading-relaxed mb-6 italic opacity-90">
+                                    “${stock.reason}”
+                                </p>
+                            </div>
+                            
+                            <div class="pt-4 border-t border-gray-800">
+                                <div class="flex gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-red-600 mt-1.5 shrink-0"></span>
+                                    <p class="text-[11px] text-gray-500 leading-normal">
+                                        <span class="text-gray-400 font-bold mr-1 uppercase">Risk:</span>${stock.risk}
+                                    </p>
                                 </div>
                             </div>
                         `;
@@ -132,22 +157,14 @@
                 }
             } catch (error) {
                 console.error("Error loading recommendations:", error);
-                noDataMessage.textContent = `加载数据失败: ${error.message}`;
                 noDataMessage.classList.remove('hidden');
             } finally {
                 loadingMessage.classList.add('hidden');
             }
         }
 
-        // 事件监听
-        viewHistoryBtn.addEventListener('click', () => {
-            loadRecommendations(dateSelector.value);
-        });
-
-        // 页面加载时自动加载今天的数据
-        document.addEventListener('DOMContentLoaded', () => {
-            loadRecommendations(getTodayDateString());
-        });
+        viewHistoryBtn.addEventListener('click', () => loadRecommendations(dateSelector.value));
+        document.addEventListener('DOMContentLoaded', () => loadRecommendations(getTodayDateString()));
     </script>
 </body>
 </html>
