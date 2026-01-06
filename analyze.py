@@ -2,75 +2,94 @@ import os
 import json
 import datetime
 import time
+import requests # DeepSeek 通常使用 OpenAI 兼容格式，这里用 requests 或 OpenAI 库
 from google import genai
 
-def main():
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("错误: 未找到 API KEY")
-        return
-
-    client = genai.Client(api_key=api_key)
-
-    market_context = "当前市场：有色金属、AI算力板块活跃。请分析紫金矿业、宁德时代、中际旭创。"
-
-    prompt = f"作为资深分析师，请从以下股票中挑3只，以JSON格式输出：{{'stocks': [{{'name': '...', 'code': '...', 'reason': '...', 'risk': '...', 'score': 95}}]}}。数据：{market_context}"
-
-    # 优化后的模型列表
-    models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash']
-    response = None
-    success_model = ""
-
-    for model_name in models_to_try:
+def call_gemini(client, prompt):
+    # 尝试顺序：Flash 8b 最容易成功，Flash 2.0 效果最好
+    models = ['gemini-1.5-flash-8b', 'gemini-1.5-flash', 'gemini-2.0-flash']
+    for model_name in models:
         try:
-            print(f"正在尝试使用: {model_name}...")
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt
-            )
-            success_model = model_name
-            break 
+            print(f"🚀 尝试 Gemini 模型: {model_name}...")
+            response = client.models.generate_content(model=model_name, contents=prompt)
+            return response.text, f"Gemini({model_name})"
         except Exception as e:
-            print(f"模型 {model_name} 暂时无法使用: {e}")
-            if "429" in str(e):
-                print("检测到频率限制，等待 30 秒后尝试备选方案...")
-                time.sleep(30) # 遇到 429 时多等一会儿
-            continue
+            print(f"⚠️ Gemini {model_name} 失败: {str(e)[:50]}")
+            time.sleep(2)
+    return None, None
 
-    if not response:
-        print("❌ 所有模型均调用失败，请检查 API Key 状态或配额。")
+def call_deepseek(api_key, prompt):
+    print("备选方案：尝试调用 DeepSeek API...")
+    url = "https://api.deepseek.com/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    data = {
+        "model": "deepseek-chat", # 或者 deepseek-reasoner (R1)
+        "messages": [
+            {"role": "system", "content": "你是一位资深投顾，请严格按JSON格式回答。"},
+            {"role": "user", "content": prompt}
+        ],
+        "response_format": {"type": "json_object"}
+    }
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=30)
+        res_json = response.json()
+        return res_json['choices'][0]['message']['content'], "DeepSeek"
+    except Exception as e:
+        print(f"❌ DeepSeek 也失败了: {e}")
+        return None, None
+
+def main():
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
+    
+    client = genai.Client(api_key=gemini_key) if gemini_key else None
+    
+    prompt = """
+    请推荐3只今日潜力A股。严格输出JSON格式：
+    {"stocks": [{"name": "股票名", "code": "代码", "reason": "理由", "risk": "风险", "score": 90}]}
+    """
+
+    # 1. 先试 Gemini
+    res_text, source = call_gemini(client, prompt)
+    
+    # 2. Gemini 不行再试 DeepSeek
+    if not res_text and deepseek_key:
+        res_text, source = call_deepseek(deepseek_key, prompt)
+
+    if not res_text:
+        print("❌ 所有 AI 服务均不可用。")
         return
 
+    # 解析与保存逻辑
     try:
-        raw_text = response.text.strip()
-        # 增强型 JSON 清洗
-        if "```json" in raw_text:
-            raw_text = raw_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in raw_text:
-            raw_text = raw_text.split("```")[1].split("```")[0].strip()
+        # 清洗可能存在的 Markdown 标签
+        if "```json" in res_text:
+            res_text = res_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in res_text:
+            res_text = res_text.split("```")[1].split("```")[0].strip()
         
-        recommendations = json.loads(raw_text)
+        data = json.loads(res_text)
         today = datetime.datetime.now().strftime("%Y-%m-%d")
-
+        
         history_path = 'data/history.json'
         os.makedirs('data', exist_ok=True)
-
+        
         all_data = {}
         if os.path.exists(history_path):
             with open(history_path, 'r', encoding='utf-8') as f:
-                try:
-                    all_data = json.load(f)
+                try: all_data = json.load(f)
                 except: pass
 
-        all_data[today] = recommendations
+        all_data[today] = data
         with open(history_path, 'w', encoding='utf-8') as f:
             json.dump(all_data, f, ensure_ascii=False, indent=2)
-
-        print(f"✅ 成功！使用模型: {success_model}")
-
+            
+        print(f"✅ 更新成功！来源: {source}")
     except Exception as e:
-        print(f"❌ 解析失败: {e}")
-        raise e
+        print(f"解析失败: {e}")
 
 if __name__ == "__main__":
     main()
