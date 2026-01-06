@@ -1,1 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 股市推荐 - 每日智能分析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自定义 Tailwind 配置，添加毛玻璃效果 */
+        @layer base {
+            body {
+                @apply bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100 font-sans;
+            }
+            .glass-card {
+                @apply bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg border border-gray-700 rounded-xl shadow-lg p-6;
+            }
+            .glass-input {
+                @apply bg-white bg-opacity-5 backdrop-filter backdrop-blur-sm border border-gray-600 rounded-md p-2 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-12 px-4">
 
+    <header class="text-center mb-12">
+        <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600 mb-4 animate-fade-in">
+            AI 股市雷达
+        </h1>
+        <p class="text-xl text-gray-300 animate-slide-up">
+            Gemini 3 Pro 每日智能精选，助力你的投资决策。
+        </p>
+    </header>
+
+    <main class="w-full max-w-4xl">
+        <div class="glass-card mb-8 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <label for="date-selector" class="text-lg font-medium">查看日期:</label>
+            <input type="date" id="date-selector" class="glass-input w-48 text-center text-lg">
+            <button id="view-history-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105">
+                查看推荐
+            </button>
+        </div>
+
+        <section id="recommendations-section" class="space-y-8">
+            <h2 id="current-date-display" class="text-3xl font-bold text-gray-200 mb-6 text-center"></h2>
+            <div id="stock-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <p id="loading-message" class="col-span-full text-center text-xl text-gray-400">
+                    正在加载数据... <br> (如果第一次加载或定时任务未更新，可能显示为空，请稍候)
+                </p>
+            </div>
+            <p id="no-data-message" class="col-span-full text-center text-xl text-red-400 hidden">
+                抱歉，该日期没有推荐数据。
+            </p>
+        </section>
+    </main>
+
+    <footer class="mt-16 text-gray-400 text-sm">
+        &copy; 2026 AI 股市雷达. Powered by Gemini 3 Pro.
+    </footer>
+
+    <script>
+        const dateSelector = document.getElementById('date-selector');
+        const viewHistoryBtn = document.getElementById('view-history-btn');
+        const currentDateDisplay = document.getElementById('current-date-display');
+        const stockCardsContainer = document.getElementById('stock-cards-container');
+        const loadingMessage = document.getElementById('loading-message');
+        const noDataMessage = document.getElementById('no-data-message');
+        let allRecommendations = {}; // 用于存储所有加载的历史数据
+
+        // 初始化日期选择器为今天
+        function getTodayDateString() {
+            const today = new Date();
+            return today.toISOString().split('T')[0];
+        }
+
+        dateSelector.value = getTodayDateString();
+
+        async function loadRecommendations(selectedDate) {
+            loadingMessage.classList.remove('hidden');
+            noDataMessage.classList.add('hidden');
+            stockCardsContainer.innerHTML = ''; // 清空之前的卡片
+
+            try {
+                // 如果是第一次加载或者需要刷新数据，则从文件获取
+                if (Object.keys(allRecommendations).length === 0 || selectedDate === getTodayDateString()) {
+                    const response = await fetch('data/history.json');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    allRecommendations = await response.json();
+                }
+
+                currentDateDisplay.textContent = `${selectedDate} 推荐股票`;
+                const todayRecommendations = allRecommendations[selectedDate];
+
+                if (todayRecommendations && todayRecommendations.stocks && todayRecommendations.stocks.length > 0) {
+                    todayRecommendations.stocks.forEach(stock => {
+                        const card = document.createElement('div');
+                        card.className = 'glass-card flex flex-col justify-between transform hover:scale-102 transition duration-300 ease-in-out';
+                        card.innerHTML = `
+                            <div>
+                                <h3 class="text-2xl font-bold text-blue-300 mb-2">${stock.name} (${stock.code})</h3>
+                                <p class="text-gray-300 text-sm mb-4 leading-relaxed">${stock.reason}</p>
+                            </div>
+                            <div class="mt-4 text-sm text-gray-400">
+                                <span class="font-semibold">风险提示:</span> ${stock.risk || '请注意投资风险。'}
+                            </div>
+                        `;
+                        stockCardsContainer.appendChild(card);
+                    });
+                } else {
+                    noDataMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Error loading recommendations:", error);
+                noDataMessage.textContent = `加载数据失败: ${error.message}`;
+                noDataMessage.classList.remove('hidden');
+            } finally {
+                loadingMessage.classList.add('hidden');
+            }
+        }
+
+        // 事件监听
+        viewHistoryBtn.addEventListener('click', () => {
+            loadRecommendations(dateSelector.value);
+        });
+
+        // 页面加载时自动加载今天的数据
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRecommendations(getTodayDateString());
+        });
+    </script>
+</body>
+</html>
