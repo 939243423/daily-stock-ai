@@ -96,28 +96,33 @@
                     todayRecommendations.stocks.forEach(stock => {
                         const card = document.createElement('div');
                         card.className = 'glass-card flex flex-col justify-between transform hover:scale-102 transition duration-300 ease-in-out';
-                        // card.innerHTML = `
-                        //     <div>
-                        //         <h3 class="text-2xl font-bold text-blue-300 mb-2">${stock.name} (${stock.code})</h3>
-                        //         <p class="text-gray-300 text-sm mb-4 leading-relaxed">${stock.reason}</p>
-                        //     </div>
-                        //     <div class="mt-4 text-sm text-gray-400">
-                        //         <span class="font-semibold">风险提示:</span> ${stock.risk || '请注意投资风险。'}
-                        //     </div>
-                        // `;
+                        // 在 index.html 中替换卡片生成的 HTML 逻辑
                         card.innerHTML = `
-                            <div>
-                                <div class="flex justify-between items-start mb-2">
-                                    <h3 class="text-2xl font-bold text-blue-300">${stock.name}</h3>
-                                    <span class="bg-blue-900 text-blue-200 text-xs font-bold px-2 py-1 rounded">${stock.code}</span>
+                            <div class="relative overflow-hidden">
+                                <div class="flex gap-2 mb-3">
+                                    <span class="px-2 py-0.5 bg-emerald-900/50 text-emerald-400 text-[10px] border border-emerald-500/30 rounded">沪深主板</span>
+                                    <span class="px-2 py-0.5 bg-amber-900/50 text-amber-400 text-[10px] border border-amber-500/30 rounded">主力异动</span>
+                                    <span class="px-2 py-0.5 bg-blue-900/50 text-blue-400 text-[10px] border border-blue-500/30 rounded">低估值</span>
                                 </div>
-                                <div class="w-full bg-gray-700 rounded-full h-1.5 mb-4">
-                                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 rounded-full" style="width: ${stock.score}%"></div>
+                                
+                                <h3 class="text-2xl font-bold text-white mb-1">${stock.name}</h3>
+                                <p class="text-sm text-gray-500 mb-4 font-mono">${stock.code}</p>
+                                
+                                <div class="mb-4">
+                                    <div class="flex justify-between text-[10px] text-gray-400 mb-1">
+                                        <span>AI 综合评分</span>
+                                        <span>${stock.score}%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-800 rounded-full h-1">
+                                        <div class="bg-gradient-to-r from-emerald-500 to-blue-500 h-1 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" style="width: ${stock.score}%"></div>
+                                    </div>
                                 </div>
-                                <p class="text-gray-300 text-sm mb-4 leading-relaxed">${stock.reason}</p>
-                            </div>
-                            <div class="mt-auto pt-4 border-t border-gray-700 text-xs text-gray-400">
-                                <span class="text-red-400 font-semibold">⚠️ 风险：</span> ${stock.risk}
+                        
+                                <p class="text-gray-300 text-sm leading-relaxed mb-4 italic">“${stock.reason}”</p>
+                                
+                                <div class="pt-3 border-t border-gray-800">
+                                    <p class="text-[11px] text-gray-500"><span class="text-red-900 font-bold">●</span> 风险提示：${stock.risk}</p>
+                                </div>
                             </div>
                         `;
                         stockCardsContainer.appendChild(card);
