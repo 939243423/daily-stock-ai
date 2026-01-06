@@ -3,168 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 股市雷达 - 每日智能分析</title>
+    <title>AI 股市雷达 - 专业版</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://tdesign.gtimg.com/site/spline/index.css" />
     <style>
-        @layer base {
-            body {
-                background-color: #0f172a;
-                background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 75%);
-                @apply text-gray-100 font-sans;
-            }
-            .glass-card {
-                background: rgba(255, 255, 255, 0.05);
-                backdrop-filter: blur(16px);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                @apply rounded-2xl shadow-2xl p-6;
-            }
-            /* 美化日期控件 */
-            input[type="date"]::-webkit-calendar-picker-indicator {
-                filter: invert(1);
-                cursor: pointer;
-            }
+        :root {
+            --td-brand-color: #0052d9;
+            --td-bg-color-container: #181818;
         }
-        .recommendation-card {
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        body {
+            background-color: #0a0a0a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 82, 217, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(107, 70, 193, 0.1) 0px, transparent 50%);
+            color: #ffffff;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
         }
-        .recommendation-card:hover {
-            transform: translateY(-8px);
-            border-color: rgba(59, 130, 246, 0.5);
-            background: rgba(255, 255, 255, 0.08);
+        .t-card {
+            background: rgba(24, 24, 24, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s cubic-bezier(0.38, 0, 0.24, 1);
         }
+        .t-card:hover {
+            border-color: var(--td-brand-color);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            transform: translateY(-5px);
+        }
+        /* 模拟 TDesign DatePicker 样式 */
+        .td-input-picker {
+            background: #1e1e1e;
+            border: 1px solid #383838;
+            color: #eee;
+            transition: all 0.2s;
+        }
+        .td-input-picker:focus {
+            border-color: var(--td-brand-color);
+            box-shadow: 0 0 0 2px rgba(0, 82, 217, 0.2);
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center py-12 px-4">
+<body class="min-h-screen py-10 px-4">
 
-    <header class="text-center mb-16">
-        <h1 class="text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-600 mb-4">
+    <header class="max-w-6xl mx-auto text-center mb-12">
+        <h1 class="text-5xl font-bold tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-400">
             AI 股市雷达
         </h1>
-        <p class="text-lg text-gray-400 font-light tracking-widest uppercase">
-            Professional Analysis • Gemini 3 Pro Driven
-        </p>
+        <p class="text-gray-500 text-sm uppercase tracking-[0.3em]">Institutional Grade AI Analysis System</p>
     </header>
 
-    <main class="w-full max-w-5xl">
-        <div class="glass-card mb-12 flex flex-col sm:flex-row items-center justify-between gap-6 border-blue-500/20">
+    <main class="max-w-6xl mx-auto">
+        <div class="t-card rounded-xl p-5 mb-10 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4">
-                <label for="date-selector" class="text-gray-400 text-sm font-bold uppercase tracking-wider">观测日期</label>
-                <input type="date" id="date-selector" 
-                       class="bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                <span class="text-gray-400 text-sm">观测日期</span>
+                <input type="date" id="date-selector" class="td-input-picker rounded px-4 py-1.5 outline-none text-sm w-44">
             </div>
-            <button id="view-history-btn" 
-                    class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-10 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95">
-                同步策略
+            <button id="view-history-btn" class="bg-[#0052d9] hover:bg-[#1464e8] text-white px-8 py-2 rounded text-sm font-medium transition-all active:opacity-80">
+                同步最新策略
             </button>
         </div>
 
         <section id="recommendations-section">
-            <h2 id="current-date-display" class="text-2xl font-bold text-gray-300 mb-8 pl-4 border-l-4 border-blue-500"></h2>
-            
-            <div id="stock-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <p id="loading-message" class="col-span-full text-center py-20 text-blue-400 animate-pulse text-lg">
-                    正在调取 AI 决策引擎数据...
-                </p>
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-1 h-6 bg-blue-600"></div>
+                <h2 id="current-date-display" class="text-xl font-bold text-gray-200">加载中...</h2>
             </div>
             
-            <div id="no-data-message" class="hidden col-span-full text-center py-20 bg-gray-900/30 rounded-3xl border border-dashed border-gray-800">
-                <p class="text-gray-500 text-xl font-light">暂无该日期的策略备份</p>
+            <div id="stock-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                </div>
+
+            <div id="no-data-message" class="hidden py-32 text-center text-gray-600 border border-dashed border-gray-800 rounded-xl">
+                暂无该日期的 AI 策略备份
             </div>
         </section>
     </main>
 
-    <footer class="mt-24 text-gray-600 text-[10px] tracking-[0.2em] uppercase text-center">
-        &copy; 2026 AI Radar System • Standard Edition
-    </footer>
-
     <script>
         const dateSelector = document.getElementById('date-selector');
         const viewHistoryBtn = document.getElementById('view-history-btn');
-        const currentDateDisplay = document.getElementById('current-date-display');
-        const stockCardsContainer = document.getElementById('stock-cards-container');
-        const loadingMessage = document.getElementById('loading-message');
-        const noDataMessage = document.getElementById('no-data-message');
-        let allRecommendations = {};
+        const container = document.getElementById('stock-cards-container');
+        const dateDisplay = document.getElementById('current-date-display');
 
-        function getTodayDateString() {
-            const today = new Date();
-            return today.toISOString().split('T')[0];
-        }
+        dateSelector.value = new Date().toISOString().split('T')[0];
 
-        dateSelector.value = getTodayDateString();
-
-        async function loadRecommendations(selectedDate) {
-            loadingMessage.classList.remove('hidden');
-            noDataMessage.classList.add('hidden');
-            stockCardsContainer.innerHTML = '';
-
+        async function render(date) {
+            container.innerHTML = '<div class="col-span-full text-center py-20 text-gray-500">正在调取决策数据...</div>';
+            
             try {
-                if (Object.keys(allRecommendations).length === 0 || selectedDate === getTodayDateString()) {
-                    const response = await fetch('data/history.json');
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    allRecommendations = await response.json();
+                const res = await fetch('data/history.json');
+                const allData = await res.json();
+                const dayData = allData[date];
+
+                if (!dayData || !dayData.stocks) {
+                    container.innerHTML = '';
+                    document.getElementById('no-data-message').classList.remove('hidden');
+                    dateDisplay.textContent = date;
+                    return;
                 }
 
-                currentDateDisplay.textContent = `${selectedDate} 策略精选`;
-                const todayRecommendations = allRecommendations[selectedDate];
+                document.getElementById('no-data-message').classList.add('hidden');
+                dateDisplay.textContent = `${date} 策略精选`;
+                container.innerHTML = '';
 
-                if (todayRecommendations && todayRecommendations.stocks && todayRecommendations.stocks.length > 0) {
-                    todayRecommendations.stocks.forEach(stock => {
-                        const card = document.createElement('div');
-                        // 关键修改：flex-col + min-h 保证对齐
-                        card.className = 'recommendation-card glass-card flex flex-col min-h-[480px]';
-                        
-                        card.innerHTML = `
-                            <div class="flex gap-2 mb-4">
-                                <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20 rounded">沪深主板</span>
-                                <span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[10px] border border-blue-500/20 rounded">主力异动</span>
+                dayData.stocks.forEach(stock => {
+                    const card = document.createElement('div');
+                    // 核心：h-full + flex-col 确保垂直对齐
+                    card.className = 't-card rounded-xl p-6 flex flex-col h-full min-h-[520px]';
+                    card.innerHTML = `
+                        <div class="flex gap-2 mb-4">
+                            <span class="px-2 py-0.5 bg-blue-500/10 text-blue-500 text-[10px] border border-blue-500/20 rounded">沪深主板</span>
+                            <span class="px-2 py-0.5 bg-orange-500/10 text-orange-500 text-[10px] border border-orange-500/20 rounded">主力异动</span>
+                            <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-500 text-[10px] border border-emerald-500/20 rounded">低估值</span>
+                        </div>
+
+                        <div class="mb-5">
+                            <h3 class="text-2xl font-bold text-white tracking-tight">${stock.name}</h3>
+                            <p class="text-gray-500 font-mono text-xs mt-1 uppercase">${stock.code}</p>
+                        </div>
+
+                        <div class="mb-6">
+                            <div class="flex justify-between text-[10px] text-gray-500 mb-1.5 uppercase font-medium">
+                                <span>AI Confidence Index</span>
+                                <span>${stock.score}%</span>
                             </div>
-                            
-                            <div class="mb-2">
-                                <h3 class="text-3xl font-black text-white">${stock.name}</h3>
-                                <p class="text-xs font-mono text-gray-500 tracking-widest uppercase mt-1">${stock.code}</p>
+                            <div class="w-full bg-gray-800 rounded-full h-1 overflow-hidden">
+                                <div class="bg-blue-600 h-full transition-all duration-1000" style="width: ${stock.score}%"></div>
                             </div>
-                            
-                            <div class="mb-6">
-                                <div class="flex justify-between text-[10px] text-gray-400 mb-1.5 font-bold uppercase">
-                                    <span>AI Confidence</span>
-                                    <span>${stock.score}%</span>
-                                </div>
-                                <div class="w-full bg-gray-800 rounded-full h-1 overflow-hidden">
-                                    <div class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" style="width: ${stock.score}%"></div>
-                                </div>
-                            </div>
-                    
-                            <div class="flex-grow">
-                                <p class="text-gray-200 text-sm leading-relaxed mb-6 italic opacity-90">
-                                    “${stock.reason}”
+                        </div>
+
+                        <div class="flex-1 mb-6">
+                            <p class="text-gray-300 text-sm leading-relaxed italic opacity-90">
+                                “${stock.reason}”
+                            </p>
+                        </div>
+
+                        <div class="pt-5 border-t border-white/5">
+                            <div class="flex gap-2">
+                                <div class="w-1.5 h-1.5 rounded-full bg-red-600 mt-1.5 shrink-0 shadow-[0_0_8px_rgba(220,38,38,0.5)]"></div>
+                                <p class="text-[11px] text-gray-500 leading-normal">
+                                    <span class="text-gray-400 font-bold mr-1">RISK:</span>${stock.risk}
                                 </p>
                             </div>
-                            
-                            <div class="pt-4 border-t border-gray-800">
-                                <div class="flex gap-2">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-red-600 mt-1.5 shrink-0"></span>
-                                    <p class="text-[11px] text-gray-500 leading-normal">
-                                        <span class="text-gray-400 font-bold mr-1 uppercase">Risk:</span>${stock.risk}
-                                    </p>
-                                </div>
-                            </div>
-                        `;
-                        stockCardsContainer.appendChild(card);
-                    });
-                } else {
-                    noDataMessage.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error("Error loading recommendations:", error);
-                noDataMessage.classList.remove('hidden');
-            } finally {
-                loadingMessage.classList.add('hidden');
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                console.error(e);
             }
         }
 
-        viewHistoryBtn.addEventListener('click', () => loadRecommendations(dateSelector.value));
-        document.addEventListener('DOMContentLoaded', () => loadRecommendations(getTodayDateString()));
+        viewHistoryBtn.onclick = () => render(dateSelector.value);
+        window.onload = () => render(dateSelector.value);
     </script>
 </body>
 </html>
