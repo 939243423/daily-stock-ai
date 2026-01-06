@@ -3,189 +3,314 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 股市雷达 - 多模式版</title>
+    <title>AI 股市雷达 - 汉化修正版</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index-dark.css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
-        /* 定义暗黑/白天模式变量 */
+        /* --- 变量定义 --- */
         :root {
-            --bg-main: #f3f4f6;
-            --bg-card: rgba(255, 255, 255, 0.9);
-            --text-main: #1f2937;
-            --text-sub: #6b7280;
-            --border-color: rgba(0, 0, 0, 0.1);
-            --input-bg: #ffffff;
-            --brand-color: #0052d9;
+            --bg-body: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --card-bg: rgba(255, 255, 255, 0.75);
+            --card-border: rgba(255, 255, 255, 0.8);
+            --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+            --btn-gradient: linear-gradient(to right, #4f46e5, #7c3aed); 
+            --capsule-bg: rgba(255, 255, 255, 0.65);
         }
 
-        .dark {
-            --bg-main: #0a0a0a;
-            --bg-card: rgba(24, 24, 24, 0.8);
-            --text-main: #ffffff;
-            --text-sub: #9ca3af;
-            --border-color: rgba(255, 255, 255, 0.1);
-            --input-bg: #1e1e1e;
+        html.dark {
+            --bg-body: #020617;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --card-bg: rgba(15, 23, 42, 0.5);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+            --btn-gradient: linear-gradient(to right, #6366f1, #a855f7);
+            --capsule-bg: rgba(15, 23, 42, 0.6);
         }
 
         body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            transition: background-color 0.5s, color 0.5s;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
-        .t-card {
-            background: var(--bg-card);
+        .title-gradient {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }
+
+        /* --- 日期选择器深度定制 --- */
+        .custom-picker .el-input__wrapper {
+            background: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+        }
+        .custom-picker .el-input__inner {
+            color: var(--text-primary) !important;
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            font-family: "PingFang SC", monospace;
+            text-align: center !important;
+            height: 32px !important;
+            line-height: 32px !important;
+            letter-spacing: 0.02em;
+        }
+        .custom-picker .el-input__prefix, .custom-picker .el-input__suffix { display: none; }
+        
+        /* [修正] 这里删除了之前的 .el-date-table 颜色覆盖样式，恢复默认 */
+
+        /* --- 控制栏胶囊 --- */
+        .control-capsule {
+            background: var(--capsule-bg);
             backdrop-filter: blur(20px);
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--card-border);
+            border-radius: 99px;
+            padding: 4px 4px 4px 16px; 
+            display: inline-flex;
+            align-items: center;
+            gap: 8px; 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+        }
+        .control-capsule:hover { transform: translateY(-1px); border-color: #6366f1; }
+
+        /* --- 渐变按钮 --- */
+        .gradient-btn {
+            background: var(--btn-gradient) !important;
+            border: none !important;
+            color: white !important;
+            font-weight: 700;
+            font-size: 13px !important; 
+            padding: 0 24px !important;  
+            height: 34px !important;     
+            border-radius: 99px !important;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+            transition: all 0.3s !important;
+        }
+        .gradient-btn:hover { box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); transform: scale(1.02); }
+
+        /* --- 卡片 (自适应) --- */
+        .stock-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            min-height: 540px; 
+            height: auto;      
+            transition: all 0.3s;
+            position: relative;
+        }
+        .stock-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.1);
+        }
+
+        .reason-box { flex: 1; margin: 20px 0; }
+        .reason-text { font-size: 15px; line-height: 1.75; color: var(--text-secondary); font-style: italic; text-align: justify; }
+
+        .card-footer { margin-top: auto; padding-top: 20px; border-top: 1px dashed var(--card-border); }
+
+        .tag-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+
+        .theme-float-btn {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 50;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 20px;
             transition: all 0.3s;
         }
+        .theme-float-btn:hover { background: rgba(99,102,241,0.1); transform: rotate(15deg); }
 
-        .td-input {
-            background: var(--input-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-        }
-
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: var(--calendar-filter, none);
-        }
-        .dark input[type="date"]::-webkit-calendar-picker-indicator {
-            --calendar-filter: invert(1);
-        }
-
-        /* 切换按钮样式 */
-        #theme-toggle {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 100;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
+        [v-cloak] { display: none; }
     </style>
 </head>
-<body class="dark min-h-screen py-10 px-4">
+<body>
 
-    <button id="theme-toggle" class="p-3 rounded-full bg-blue-600 text-white hover:scale-110 transition-transform">
-        <span id="theme-icon">🌞</span>
-    </button>
+<div id="app" v-cloak class="min-h-screen w-full flex flex-col items-center py-10 px-6">
+    
+    <el-config-provider :locale="locale">
+        
+        <button @click="toggleTheme" class="theme-float-btn shadow-sm">
+            <span v-if="isDark">🌙</span><span v-else>☀️</span>
+        </button>
 
-    <header class="max-w-6xl mx-auto text-center mb-12">
-        <h1 class="text-5xl font-bold tracking-tight mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-indigo-400">
-            AI 股市雷达
-        </h1>
-        <p class="text-sm uppercase tracking-[0.3em] opacity-60">Multi-Model Analysis System</p>
-    </header>
+        <header class="text-center flex-shrink-0 animate-fade-in-up mb-8">
+            <h1 class="text-4xl md:text-6xl mb-3 main-title title-gradient">AI 股市雷达</h1>
+            <p class="text-xs font-bold tracking-[0.4em] uppercase opacity-40" style="color: var(--text-secondary)">
+                Quant Analysis • Gemini 3 Pro
+            </p>
+        </header>
 
-    <main class="max-w-6xl mx-auto">
-        <div class="t-card rounded-xl p-5 mb-10 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-                <span class="opacity-70 text-sm font-medium">观测日期</span>
-                <input type="date" id="date-selector" class="td-input rounded-md px-4 py-1.5 outline-none text-sm w-44">
+        <div class="flex justify-center mb-10 flex-shrink-0 animate-fade-in-up" style="animation-delay: 0.1s;">
+            <div class="control-capsule">
+                <div class="flex items-center">
+                    <span class="text-xs font-bold uppercase tracking-widest opacity-60 whitespace-nowrap" style="color: var(--text-secondary); transform: scale(0.9);">
+                        观测日期
+                    </span>
+                    <el-date-picker
+                        v-model="selectedDate"
+                        type="date"
+                        value-format="YYYY-MM-DD"
+                        format="YYYY年MM月DD日"
+                        :clearable="false"
+                        :editable="false"
+                        class="custom-picker"
+                        style="width: 135px;" 
+                        @change="fetchData"
+                        popper-class="glass-popper"
+                    ></el-date-picker>
+                </div>
+                <div class="w-px h-3 bg-gray-400/30 hidden md:block"></div>
+                <el-button class="gradient-btn" :loading="loading" @click="fetchData" round>
+                    同步策略
+                </el-button>
             </div>
-            <button id="view-history-btn" class="bg-[#0052d9] hover:bg-[#1464e8] text-white px-8 py-2 rounded text-sm font-medium transition-all shadow-lg shadow-blue-500/20">
-                同步策略
-            </button>
         </div>
 
-        <section id="recommendations-section">
-            <div class="flex items-center gap-3 mb-8">
-                <div class="w-1.5 h-6 bg-blue-600 rounded-full"></div>
-                <h2 id="current-date-display" class="text-2xl font-bold">加载中...</h2>
-            </div>
-            
-            <div id="stock-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div v-if="stocks.length" class="w-full max-w-7xl animate-fade-in-up" style="animation-delay: 0.2s;">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+                <div v-for="stock in stocks" :key="stock.code" class="stock-card group">
+                    <div class="flex gap-2 mb-4">
+                        <span class="tag-pill bg-blue-500/10 text-blue-600 dark:text-blue-400">沪深主板</span>
+                        <span class="tag-pill bg-amber-500/10 text-amber-600 dark:text-amber-400">主力异动</span>
+                        <span class="tag-pill bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">低估值</span>
+                    </div>
+                    
+                    <div class="flex justify-between items-end mb-4">
+                        <div>
+                            <h3 class="text-3xl font-black tracking-tight group-hover:text-indigo-500 transition-colors">{{ stock.name }}</h3>
+                            <p class="font-mono text-sm font-bold opacity-50 tracking-widest mt-1">{{ stock.code }}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] font-bold uppercase opacity-40 mb-1">AI 信心指数</div>
+                            <div class="text-2xl font-black transition-colors duration-300" :style="{ color: getScoreColor(stock.score) }">
+                                {{ stock.score }}%
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <el-progress 
+                        :percentage="stock.score" 
+                        :show-text="false" 
+                        :stroke-width="4" 
+                        :color="getScoreColor(stock.score)" 
+                        class="opacity-90"
+                    ></el-progress>
+
+                    <div class="reason-box">
+                        <p class="reason-text">“ {{ stock.reason }} ”</p>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="flex gap-2 items-start">
+                            <span class="relative flex h-2 w-2 mt-1.5 flex-none">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                            </span>
+                            <p class="text-[11px] leading-relaxed opacity-60 font-medium">
+                                <span class="font-bold mr-1 text-red-500/80">风险:</span>{{ stock.risk }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
-
-            <div id="no-data-message" class="hidden py-32 text-center opacity-40 border-2 border-dashed border-current rounded-xl">
-                暂无该日期的 AI 策略备份
             </div>
-        </section>
-    </main>
+        </div>
 
-    <script>
-        const dateSelector = document.getElementById('date-selector');
-        const viewHistoryBtn = document.getElementById('view-history-btn');
-        const container = document.getElementById('stock-cards-container');
-        const dateDisplay = document.getElementById('current-date-display');
-        const themeToggle = document.getElementById('theme-toggle');
-        const themeIcon = document.getElementById('theme-icon');
+        <div v-else class="flex-1 flex flex-col items-center justify-center opacity-40 min-h-[400px]">
+            <el-empty description="AI 策略生成中..." :image-size="140"></el-empty>
+        </div>
 
-        // 主题切换逻辑
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark');
-            const isDark = document.body.classList.contains('dark');
-            themeIcon.innerText = isDark ? '🌞' : '🌙';
-        });
+        <footer class="text-center text-[10px] uppercase tracking-[0.2em] opacity-30 font-bold mt-12 pb-4">
+            &copy; 2026 AI Radar • Powered by DeepSeek & Gemini
+        </footer>
 
-        dateSelector.value = new Date().toISOString().split('T')[0];
+    </el-config-provider>
+</div>
 
-        async function render(date) {
-            container.innerHTML = '<div class="col-span-full text-center py-20 opacity-50 animate-pulse">调取云端策略中...</div>';
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/element-plus"></script>
+<script src="https://unpkg.com/element-plus/dist/locale/zh-cn.min.js"></script>
+
+<script>
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            // 汉化包
+            const locale = ElementPlusLocaleZhCn;
             
-            try {
-                const res = await fetch('data/history.json');
-                const allData = await res.json();
-                const dayData = allData[date];
+            const isDark = ref(false);
+            const selectedDate = ref(new Date().toISOString().split('T')[0]);
+            const stocks = ref([]);
+            const loading = ref(false);
 
-                if (!dayData || !dayData.stocks) {
-                    container.innerHTML = '';
-                    document.getElementById('no-data-message').classList.remove('hidden');
-                    dateDisplay.textContent = date;
-                    return;
+            const toggleTheme = () => {
+                isDark.value = !isDark.value;
+                document.documentElement.className = isDark.value ? 'dark' : '';
+            };
+
+            // 核心：5档色阶算法
+            const getScoreColor = (score) => {
+                if (score >= 90) return '#8b5cf6'; // 90-100: 梦幻紫 (Theme)
+                if (score >= 80) return '#3b82f6'; // 80-89: 宝石蓝 (Blue)
+                if (score >= 70) return '#10b981'; // 70-79: 翡翠绿 (Green)
+                if (score >= 60) return '#f59e0b'; // 60-69: 活力橙 (Orange)
+                return '#ef4444';                  // <60: 警示红 (Red)
+            };
+
+            const fetchData = async () => {
+                loading.value = true;
+                try {
+                    const res = await fetch(`data/history.json?t=${Date.now()}`);
+                    if(!res.ok) throw new Error("No Data");
+                    const allData = await res.json();
+                    stocks.value = allData[selectedDate.value]?.stocks || [];
+                } catch (e) {
+                    stocks.value = [];
+                } finally {
+                    loading.value = false;
                 }
+            };
 
-                document.getElementById('no-data-message').classList.add('hidden');
-                dateDisplay.textContent = `${date} 策略精选`;
-                container.innerHTML = '';
+            onMounted(() => {
+                fetchData();
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                    .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }
+                `;
+                document.head.appendChild(style);
+            });
 
-                dayData.stocks.forEach(stock => {
-                    const card = document.createElement('div');
-                    card.className = 't-card rounded-2xl p-7 flex flex-col h-full min-h-[540px] shadow-sm hover:shadow-xl transition-all hover:-translate-y-2';
-                    card.innerHTML = `
-                        <div class="flex gap-2 mb-5">
-                            <span class="px-2 py-0.5 bg-blue-500/10 text-blue-500 text-[10px] font-bold border border-blue-500/20 rounded">沪深主板</span>
-                            <span class="px-2 py-0.5 bg-orange-500/10 text-orange-500 text-[10px] font-bold border border-orange-500/20 rounded">主力异动</span>
-                            <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20 rounded">低估值</span>
-                        </div>
-
-                        <div class="mb-5">
-                            <h3 class="text-3xl font-bold tracking-tight">${stock.name}</h3>
-                            <p class="opacity-40 font-mono text-sm mt-1">${stock.code}</p>
-                        </div>
-
-                        <div class="mb-8">
-                            <div class="flex justify-between text-[10px] opacity-50 mb-2 font-bold uppercase">
-                                <span>AI Confidence Index</span>
-                                <span>${stock.score}%</span>
-                            </div>
-                            <div class="w-full bg-gray-500/20 rounded-full h-1.5 overflow-hidden">
-                                <div class="bg-blue-600 h-full shadow-[0_0_10px_rgba(37,99,235,0.4)]" style="width: ${stock.score}%"></div>
-                            </div>
-                        </div>
-
-                        <div class="flex-grow mb-8 text-lg">
-                            <p class="leading-relaxed italic opacity-90">
-                                <span class="text-blue-500 font-bold not-italic">解析：</span>“${stock.reason}”
-                            </p>
-                        </div>
-
-                        <div class="pt-6 border-t border-current opacity-20"></div>
-                        <div class="flex gap-3">
-                            <div class="w-2 h-2 rounded-full bg-red-600 mt-1.5 shrink-0 animate-pulse"></div>
-                            <p class="text-[12px] opacity-60 leading-relaxed">
-                                <b class="mr-1">风险提示:</b>${stock.risk}
-                            </p>
-                        </div>
-                    `;
-                    container.appendChild(card);
-                });
-            } catch (e) {
-                console.error(e);
-            }
+            return { selectedDate, stocks, loading, isDark, toggleTheme, fetchData, locale, getScoreColor };
         }
-
-        viewHistoryBtn.onclick = () => render(dateSelector.value);
-        window.onload = () => render(dateSelector.value);
-    </script>
+    }).use(ElementPlus).mount('#app');
+</script>
 </body>
 </html>
