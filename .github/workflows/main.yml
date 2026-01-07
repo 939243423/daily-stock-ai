@@ -26,13 +26,15 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install google-genai
+          # 关键修改：同时安装 requests 和最新版 google-genai
+          # -U 参数确保强制升级到最新版，避免旧版 SDK 找不到新模型
+          pip install -U google-genai requests
 
       - name: Run AI Analysis
         env:
           # 确保你在 Repository Secrets 中配置了 GEMINI_API_KEY
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }} # 新增deepseek
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }} 
         run: python analyze.py
 
       - name: Commit and Push Data
