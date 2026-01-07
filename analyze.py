@@ -3,8 +3,38 @@ import json
 import datetime
 import time
 import requests
+import yfinance as yf # [新增] 引入 yfinance 库
 from google import genai
 from google.genai import types
+
+# [新增] 获取真实股价的辅助函数
+def get_real_price(code):
+    """
+    根据 A 股代码获取昨日收盘价 (yfinance)
+    """
+    try:
+        # 1. 判断后缀 (.SS 沪市, .SZ 深市)
+        ticker_symbol = ""
+        if code.startswith("6") or code.startswith("9"):
+            ticker_symbol = f"{code}.SS"
+        elif code.startswith("0") or code.startswith("2") or code.startswith("3"):
+            ticker_symbol = f"{code}.SZ"
+        else:
+            return None 
+
+        # 2. 获取数据 (取过去5天数据以防周末/假期)
+        ticker = yf.Ticker(ticker_symbol)
+        hist = ticker.history(period="5d")
+        
+        if not hist.empty:
+            # 取最近一天的收盘价
+            latest_price = hist['Close'].iloc[-1]
+            return f"{latest_price:.2f}"
+            
+    except Exception as e:
+        print(f"⚠️ 无法获取 {code} 的股价: {e}")
+    
+    return None
 
 def call_gemini(client, prompt):
     """
@@ -151,6 +181,19 @@ def main():
             print("❌ 数据格式错误：缺少 'stocks' 字段")
             return
 
+        # [新增] 遍历股票，强制修正为真实价格
+        print("🔍 正在联网校准股价...")
+        for stock in data['stocks']:
+            code = stock.get('code', '')
+            if code:
+                real_price = get_real_price(code)
+                if real_price:
+                    print(f"   ✅ {stock['name']} ({code}): 修正价格 {stock.get('price')} -> {real_price}")
+                    stock['price'] = real_price
+                else:
+                    print(f"   ⚠️ {stock['name']} ({code}): 获取股价失败，保留原值")
+
+        # 5. 写入文件
         today = datetime.datetime.now().strftime("%Y-%m-%d")
         history_path = 'data/history.json'
         os.makedirs('data', exist_ok=True)
