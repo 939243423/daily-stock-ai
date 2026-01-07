@@ -3,47 +3,41 @@ import json
 import datetime
 import time
 import requests
-import yfinance as yf # [新增] 引入 yfinance 库
+import yfinance as yf
 from google import genai
 from google.genai import types
 
-# [新增] 获取真实股价的辅助函数
+# --- 1. 股价获取逻辑 ---
 def get_real_price(code):
-    """
-    根据 A 股代码获取昨日收盘价 (yfinance)
-    """
+    """根据 A 股代码获取昨日收盘价 (yfinance)"""
     try:
-        # 1. 判断后缀 (.SS 沪市, .SZ 深市)
+        # 判断后缀 (.SS 沪市, .SZ 深市)
         ticker_symbol = ""
         if code.startswith("6") or code.startswith("9"):
             ticker_symbol = f"{code}.SS"
-        elif code.startswith("0") or code.startswith("2") or code.startswith("3"):
+        elif code.startswith(("0", "2", "3")):
             ticker_symbol = f"{code}.SZ"
         else:
             return None 
 
-        # 2. 获取数据 (取过去5天数据以防周末/假期)
         ticker = yf.Ticker(ticker_symbol)
+        # 获取最近5天数据，确保能覆盖周末或节假日
         hist = ticker.history(period="5d")
         
         if not hist.empty:
-            # 取最近一天的收盘价
             latest_price = hist['Close'].iloc[-1]
             return f"{latest_price:.2f}"
             
     except Exception as e:
         print(f"⚠️ 无法获取 {code} 的股价: {e}")
-    
     return None
 
+# --- 2. Gemini 调用逻辑 ---
 def call_gemini(client, prompt):
-    """
-    尝试调用 Gemini 系列模型。
-    包含：修正后的模型名称列表 + 智能退避重试策略
-    """
-    # 按照优先级排序的模型列表
+    """使用最新 SDK 调用 Gemini，支持自动降级和重试"""
+    # 按照优先级排序的模型列表（使用 2.0 稳定版）
     models = [
-        'gemini-2.0-flash-exp', 
+        'gemini-2.0-flash', 
         'gemini-1.5-flash',
         'gemini-1.5-flash-8b'
     ]
@@ -53,11 +47,15 @@ def call_gemini(client, prompt):
         for attempt in range(max_retries):
             try:
                 print(f"🚀 [模型: {model_name}] 第 {attempt + 1}/{max_retries} 次尝试...")
-                time.sleep(2) # 请求前强制休眠 2 秒
                 
                 response = client.models.generate_content(
-                    model=model_name, 
-                    contents=prompt
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        # 核心优化：强制模型返回 JSON 格式，不带 Markdown 标签
+                        response_mime_type='application/json',
+                        temperature=0.2, # 降低随机性，使结果更稳健
+                    )
                 )
                 
                 if response and response.text:
@@ -66,26 +64,22 @@ def call_gemini(client, prompt):
             except Exception as e:
                 error_str = str(e)
                 if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-                    wait_time = 20 * (attempt + 1)
-                    print(f"⏳ 触发限流 (429)，暂停 {wait_time} 秒后重试...")
+                    wait_time = 25 * (attempt + 1)
+                    print(f"⏳ 触发限流，暂停 {wait_time} 秒...")
                     time.sleep(wait_time)
-                    continue 
-                elif "404" in error_str or "NOT_FOUND" in error_str:
-                    print(f"⚠️ 模型 {model_name} 名称无效或未发布，跳过...")
+                elif "404" in error_str:
+                    print(f"⚠️ 模型 {model_name} 未找到，跳过...")
                     break 
                 else:
-                    print(f"⚠️ 未知错误: {error_str[:100]}")
-                    if attempt < max_retries - 1:
-                        time.sleep(5)
-                        continue
+                    print(f"⚠️ 错误: {error_str[:100]}")
+                    time.sleep(5)
                     break
-
     return None, None
 
+# --- 3. DeepSeek 备选逻辑 ---
 def call_deepseek(api_key, prompt):
-    """DeepSeek 备选方案"""
-    print("🔄 Gemini 全线繁忙，切换至 DeepSeek 备用通道...")
-    url = "https://api.deepseek.com/chat/completions"
+    print("🔄 尝试切换至 DeepSeek 备用通道...")
+    url = "[https://api.deepseek.com/chat/completions](https://api.deepseek.com/chat/completions)"
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}"
@@ -93,129 +87,99 @@ def call_deepseek(api_key, prompt):
     payload = {
         "model": "deepseek-chat",
         "messages": [
-            {"role": "system", "content": "你是一位精通 A 股量化交易分析的专家。请严格按 JSON 格式回答。"},
+            {"role": "system", "content": "你是一位 A 股量化交易专家。请严格按 JSON 格式回答。"},
             {"role": "user", "content": prompt}
         ],
-        "response_format": {"type": "json_object"},
-        "max_tokens": 1500
+        "response_format": {"type": "json_object"}
     }
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=60)
-        res_json = response.json()
-        return res_json['choices'][0]['message']['content'], "DeepSeek"
+        return response.json()['choices'][0]['message']['content'], "DeepSeek"
     except Exception as e:
         print(f"❌ DeepSeek 调用失败: {e}")
         return None, None
 
+# --- 4. 主程序 ---
 def main():
     gemini_key = os.environ.get("GEMINI_API_KEY")
     deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
     
-    client = None
-    if gemini_key:
-        try:
-            client = genai.Client(api_key=gemini_key)
-        except Exception as e:
-            print(f"Gemini Client 初始化失败: {e}")
-    
-    # --- 核心 Prompt 修改：增加了 price 和 tags 的明确要求 ---
+    if not gemini_key:
+        print("❌ 错误: 未设置 GEMINI_API_KEY 环境变量")
+        return
+
+    client = genai.Client(api_key=gemini_key)
+
     prompt = """
-    你是一位专门服务于普通散户投资者的顶级 A 股策略师。
-    请挑选 3 只同时满足以下【硬性门槛】和【选股逻辑】的股票。
-
-    【硬性门槛】：
-    1. 仅限沪深主板个股（代码 60XXXX 或 00XXXX）。
-    2. 禁止推荐科创板、创业板、北交所及港股。
-
-    【选股逻辑】：
-    1. 估值洼地：处于历史估值底部、破净或低 PE 的行业龙头。
-    2. 主力入场：近期成交量异常放大，底部放量，显示大资金建仓。
-    3. 安全边际：基本面稳健，避开 ST 和近期暴涨妖股。
-
-    【评分标准】：
-    * 90-99 分 (极高)：梦幻紫 - 完美标的
-    * 80-89 分 (高)：宝石蓝 - 优秀标的
-    * 70-79 分 (中高)：翡翠绿 - 稳健标的
-    * 60-69 分 (中)：活力橙 - 观察标的
-    * < 60 分 (低)：警示红 - 风险标的
-
-    请严格以下 JSON 格式输出（确保字段完整）：
+    挑选 3 只满足以下条件的 A 股主板股票 (60XXXX 或 00XXXX)。
+    逻辑：1. 估值洼地 2. 主力底部放量 3. 避开 ST。
+    
+    必须严格按以下 JSON 格式输出，不要包含任何解释文字：
     {
       "stocks": [
         {
           "name": "股票名称",
           "code": "代码",
-          "price": "12.34",  // ⚠️ 必填：截止昨日收盘的参考价格(字符串)
-          "tags": ["沪深主板", "主力抢筹", "低估值"], // ⚠️ 必填：3个简短标签，顺序代表：[1.板块, 2.资金面, 3.基本面]
-          "reason": "【估值逻辑+主力迹象】详细分析...",
-          "risk": "风险提示...",
+          "price": "参考股价",
+          "tags": ["板块", "资金面", "基本面"],
+          "reason": "推荐理由(包含估值和成交量分析)",
+          "risk": "风险提示",
           "score": 85
         }
       ]
     }
     """
     
-    res_text, source = None, None
-    
-    if client:
-        res_text, source = call_gemini(client, prompt)
-    
+    # 1. 获取 AI 生成内容
+    res_text, source = call_gemini(client, prompt)
     if not res_text and deepseek_key:
         res_text, source = call_deepseek(deepseek_key, prompt)
 
     if not res_text:
-        print("❌ 致命错误：所有 AI 均无法生成数据。")
+        print("❌ 所有 AI 服务均不可用")
         return
 
+    # 2. 解析与校准
     try:
-        res_text = res_text.strip()
-        if res_text.startswith("```"):
-            lines = res_text.splitlines()
-            if lines[0].startswith("```"): lines = lines[1:]
-            if lines[-1].startswith("```"): lines = lines[:-1]
-            res_text = "\n".join(lines)
-        
         data = json.loads(res_text)
-        
-        if 'stocks' not in data:
-            print("❌ 数据格式错误：缺少 'stocks' 字段")
-            return
+        print(f"🔍 AI 推荐完毕 (来源: {source})，开始联网校准价格...")
 
-        # [新增] 遍历股票，强制修正为真实价格
-        print("🔍 正在联网校准股价...")
-        for stock in data['stocks']:
+        for stock in data.get('stocks', []):
             code = stock.get('code', '')
             if code:
                 real_price = get_real_price(code)
                 if real_price:
-                    print(f"   ✅ {stock['name']} ({code}): 修正价格 {stock.get('price')} -> {real_price}")
+                    print(f"   ✅ {stock['name']}({code}): AI 报价 {stock.get('price')} -> 真实收盘价 {real_price}")
                     stock['price'] = real_price
                 else:
-                    print(f"   ⚠️ {stock['name']} ({code}): 获取股价失败，保留原值")
+                    print(f"   ⚠️ {stock['name']}({code}): 联网查价失败，保留原报价")
 
-        # 5. 写入文件
-        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        # 3. 写入历史记录 (处理北京时间)
+        # GitHub Actions 默认是 UTC，我们手动加 8 小时得到北京日期
+        bj_time = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+        today_str = bj_time.strftime("%Y-%m-%d")
+        
         history_path = 'data/history.json'
         os.makedirs('data', exist_ok=True)
         
-        all_history = {}
+        history_data = {}
         if os.path.exists(history_path):
             with open(history_path, 'r', encoding='utf-8') as f:
                 try:
-                    all_history = json.load(f)
+                    history_data = json.load(f)
                 except:
-                    all_history = {}
+                    history_data = {}
 
-        all_history[today] = data
+        history_data[today_str] = data
         
         with open(history_path, 'w', encoding='utf-8') as f:
-            json.dump(all_history, f, ensure_ascii=False, indent=2)
+            json.dump(history_data, f, ensure_ascii=False, indent=2)
             
-        print(f"✅ 数据更新成功！\n📅 日期: {today}\n🤖 模型: {source}")
+        print(f"🎉 任务完成！数据已存入 history.json (日期: {today_str})")
 
     except Exception as e:
-        print(f"❌ 数据解析或写入失败: {e}")
-        print(f"🔍 原始返回内容:\n{res_text}")
+        print(f"❌ 处理数据时出错: {e}")
+        print(f"原始内容: {res_text}")
 
 if __name__ == "__main__":
     main()
