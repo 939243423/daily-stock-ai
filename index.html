@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 股市雷达</title>
+    <title>AI 股市雷达 - 移动端聚焦版</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index-dark.css" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -109,13 +109,9 @@
             background: var(--card-bg); backdrop-filter: blur(24px); border: 1px solid var(--card-border);
             border-radius: 24px; padding: 28px; display: flex; flex-direction: column;
             min-height: 540px; height: auto; position: relative; cursor: pointer;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 更平滑的过渡 */
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
-        /* 重点修改：
-           将 :hover 样式提取出来，同时也应用给 .active-card 类
-           这样 JS 动态添加 active-card 类时也能触发同样的效果
-        */
         .stock-card:hover,
         .stock-card.active-card {
             transform: translateY(-8px) scale(1.02); 
@@ -135,7 +131,6 @@
             transform: translate(-10px, 10px) scale(0.5); 
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        /* 同样支持 active-card */
         .stock-card:hover .external-link-icon,
         .stock-card.active-card .external-link-icon { 
             opacity: 1; 
@@ -154,6 +149,14 @@
             cursor: pointer; font-size: 20px; transition: all 0.3s;
         }
         .theme-float-btn:hover { background: rgba(99,102,241,0.1); transform: rotate(15deg); }
+
+        /* [新增] 数字字体 */
+        .font-num { font-family: 'SF Mono', 'Roboto Mono', Menlo, monospace; }
+        
+        /* 90分文字特效 */
+        .score-gradient-text {
+            background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900;
+        }
     </style>
 </head>
 <body>
@@ -226,19 +229,41 @@
                     </svg>
 
                     <div class="flex gap-2 mb-4">
-                        <span class="tag-pill bg-blue-500/10 text-blue-600 dark:text-blue-400">沪深主板</span>
-                        <span class="tag-pill bg-amber-500/10 text-amber-600 dark:text-amber-400">主力异动</span>
-                        <span class="tag-pill bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">低估值</span>
+                        <template v-if="stock.tags && stock.tags.length">
+                            <span 
+                                v-for="(tag, index) in stock.tags" 
+                                :key="index"
+                                class="tag-pill"
+                                :class="getTagClass(index)"
+                            >
+                                {{ tag }}
+                            </span>
+                        </template>
+                        <template v-else>
+                            <span class="tag-pill bg-blue-500/10 text-blue-600 dark:text-blue-400">沪深主板</span>
+                            <span class="tag-pill bg-amber-500/10 text-amber-600 dark:text-amber-400">主力异动</span>
+                            <span class="tag-pill bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">低估值</span>
+                        </template>
                     </div>
                     
                     <div class="flex justify-between items-end mb-4">
                         <div>
-                            <h3 class="text-3xl font-black tracking-tight group-hover:text-indigo-500 transition-colors">{{ stock.name }}</h3>
-                            <p class="font-mono text-sm font-bold opacity-50 tracking-widest mt-1 group-hover:text-indigo-400 transition-colors">{{ stock.code }}</p>
+                            <h3 class="text-3xl font-black tracking-tight group-hover:text-indigo-500 transition-colors mb-1">{{ stock.name }}</h3>
+                            
+                            <div class="flex items-center gap-2 opacity-60">
+                                <span class="font-mono text-sm font-bold tracking-widest text-indigo-500 bg-indigo-500/10 px-1.5 py-0.5 rounded">{{ stock.code }}</span>
+                                <span v-if="stock.price" class="font-num text-sm font-bold tracking-tight">
+                                    ¥{{ stock.price }}
+                                </span>
+                            </div>
                         </div>
                         <div class="text-right">
                             <div class="text-[10px] font-bold uppercase opacity-40 mb-1">AI 信心指数</div>
-                            <div class="text-2xl font-black transition-colors duration-300" :style="{ color: getScoreColor(stock.score) }">
+                            <div 
+                                class="text-2xl font-black transition-colors duration-300" 
+                                :class="{ 'score-gradient-text': stock.score >= 90 }"
+                                :style="stock.score < 90 ? { color: getScoreColor(stock.score) } : {}"
+                            >
                                 {{ stock.score }}%
                             </div>
                         </div>
@@ -305,8 +330,8 @@
             const selectedDate = ref(new Date().toISOString().split('T')[0]);
             const stocks = ref([]);
             const loading = ref(false);
-            const stockCards = ref([]); // DOM 引用
-            let observer = null;        // 观察器实例
+            const stockCards = ref([]); 
+            let observer = null; 
 
             const toggleTheme = () => {
                 isDark.value = !isDark.value;
@@ -321,6 +346,16 @@
                 return '#ef4444';
             };
 
+            // [新增] 动态标签颜色分配器
+            const getTagClass = (index) => {
+                const styles = [
+                    'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+                    'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                    'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                ];
+                return styles[index % styles.length];
+            };
+
             const goToQuote = (code) => {
                 let market = 'SH';
                 if (code.startsWith('6') || code.startsWith('9')) { market = 'SH'; } 
@@ -329,25 +364,15 @@
                 window.open(`https://xueqiu.com/S/${market}${code}`, '_blank');
             };
 
-            // 核心逻辑：初始化 Intersection Observer
             const initObserver = () => {
-                // 如果之前的观察器存在，先断开，防止重复
                 if (observer) observer.disconnect();
-
-                // 设置观察选项
                 const options = {
-                    root: null, // 视口作为根
-                    // rootMargin 设置为负值，意味着要在屏幕中心区域才会触发
-                    // 上下各缩进 25%，只有进入中间 50% 区域才算“进入”
+                    root: null,
                     rootMargin: '-25% 0px -25% 0px', 
-                    threshold: 0.2 // 稍微进入一点就触发
+                    threshold: 0.2
                 };
-
                 observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
-                        // 移动端/小屏才启用这个自动高亮逻辑
-                        // 如果是桌面端，有鼠标 Hover 就够了，不强制加 class
-                        // 当然如果您想桌面端滚动也有效果，可以去掉这个判断
                         if (window.innerWidth < 1024) { 
                             if (entry.isIntersecting) {
                                 entry.target.classList.add('active-card');
@@ -357,8 +382,6 @@
                         }
                     });
                 }, options);
-
-                // 等待 DOM 更新后，开始观察所有卡片
                 nextTick(() => {
                     const cards = document.querySelectorAll('.stock-card');
                     cards.forEach(card => observer.observe(card));
@@ -372,10 +395,7 @@
                     if(!res.ok) throw new Error("No Data");
                     const allData = await res.json();
                     stocks.value = allData[selectedDate.value]?.stocks || [];
-                    
-                    // 数据加载完后，初始化观察器
                     initObserver();
-                    
                 } catch (e) {
                     stocks.value = [];
                 } finally {
@@ -402,7 +422,7 @@
                 document.head.appendChild(style);
             });
 
-            return { selectedDate, stocks, loading, isDark, toggleTheme, fetchData, locale, getScoreColor, goToQuote, stockCards };
+            return { selectedDate, stocks, loading, isDark, toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, stockCards };
         }
     }).use(ElementPlus).mount('#app');
 </script>
