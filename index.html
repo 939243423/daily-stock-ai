@@ -2,99 +2,205 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 股市雷达 - 移动端聚焦版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>AI 股市雷达</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index-dark.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* --- 核心修复 --- */
+        /* --- 基础设置 --- */
         [v-cloak] { display: none !important; }
+        
+        /* 关键帧定义 (放在最前) */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+        @keyframes floatBlob {
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+            50% { transform: translate(30px, 50px) scale(1.1) rotate(10deg); }
+            100% { transform: translate(-20px, -30px) scale(0.9) rotate(-5deg); }
+        }
 
-        /* --- Loading --- */
+        /* [关键修复 1] 修复移动端弹窗打开时页面变窄/抖动 */
+        body.el-popup-parent--hidden {
+            padding-right: 0 !important;
+            overflow: hidden !important;
+        }
+
+        /* --- [核心] 液态背景动画 --- */
+        .liquid-bg-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; overflow: hidden;
+            background: var(--bg-body); transition: background 0.5s;
+        }
+        .liquid-blob {
+            position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.6;
+            animation: floatBlob 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: rgba(99, 102, 241, 0.3); animation-delay: 0s; }
+        .blob-2 { bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: rgba(139, 92, 246, 0.25); animation-delay: -5s; }
+        .blob-3 { top: 40%; left: 40%; width: 40vw; height: 40vw; background: rgba(6, 182, 212, 0.2); animation-delay: -10s; }
+
+        /* --- Loading (修复动画不转的问题) --- */
         #global-loader {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #f8fafc; z-index: 9999;
-            display: flex; justify-content: center; align-items: center; flex-direction: column; transition: opacity 0.5s ease;
+            background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px);
+            z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; transition: opacity 0.5s ease;
         }
-        html.dark #global-loader { background-color: #020617; }
+        html.dark #global-loader { background: rgba(2, 6, 23, 0.8); }
         .loader-spinner {
             width: 44px; height: 44px; border: 4px solid rgba(99, 102, 241, 0.15);
-            border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite;
+            border-top: 4px solid #6366f1; border-radius: 50%;
+            animation: spin 0.8s linear infinite; /* [修复] 确保指向正确的关键帧 */
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .loader-text {
             margin-top: 16px; color: #64748b; font-size: 14px; font-weight: 500; letter-spacing: 0.15em;
-            font-family: -apple-system, "PingFang SC", sans-serif; animation: pulse 1.5s ease-in-out infinite;
+            font-family: -apple-system, sans-serif;
+            animation: pulse 1.5s ease-in-out infinite; /* [修复] 呼吸效果 */
         }
-        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 
-        /* --- 变量定义 --- */
+        /* --- 变量 --- */
         :root {
-            --bg-body: #f8fafc; --text-primary: #0f172a; --text-secondary: #64748b;
-            --card-bg: rgba(255, 255, 255, 0.75); --card-border: rgba(255, 255, 255, 0.8);
+            --bg-body: #f0f4f8; --text-primary: #0f172a; --text-secondary: #64748b;
+            --card-bg: rgba(255, 255, 255, 0.45); 
+            --card-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
             --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
             --btn-gradient: linear-gradient(to right, #4f46e5, #7c3aed); 
-            --capsule-bg: rgba(255, 255, 255, 0.65); --radar-line: rgba(99, 102, 241, 0.2);
+            --capsule-bg: rgba(255, 255, 255, 0.5); --radar-line: rgba(99, 102, 241, 0.2);
         }
         html.dark {
             --bg-body: #020617; --text-primary: #f8fafc; --text-secondary: #94a3b8;
-            --card-bg: rgba(15, 23, 42, 0.5); --card-border: rgba(255, 255, 255, 0.08);
+            --card-bg: rgba(15, 23, 42, 0.4); 
+            --card-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
             --accent-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
             --btn-gradient: linear-gradient(to right, #6366f1, #a855f7);
-            --capsule-bg: rgba(15, 23, 42, 0.6); --radar-line: rgba(255, 255, 255, 0.1);
+            --capsule-bg: rgba(15, 23, 42, 0.5); --radar-line: rgba(255, 255, 255, 0.1);
         }
         body {
-            background-color: var(--bg-body); color: var(--text-primary);
-            font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-            transition: background-color 0.5s, color 0.5s; min-height: 100vh; overflow-x: hidden; overflow-y: auto;
+            color: var(--text-primary); font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            transition: color 0.5s; min-height: 100vh; overflow-x: hidden; overflow-y: auto;
         }
         .title-gradient { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
 
-        /* --- 雷达 --- */
-        .empty-state-card {
-            background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border);
-            border-radius: 32px; padding: 60px 20px; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; min-height: 400px; box-shadow: 0 20px 50px -10px rgba(0,0,0,0.05);
+        /* --- 灵动胶囊导航 --- */
+        .nav-capsule {
+            position: fixed; top: 24px; right: 24px; z-index: 50;
+            display: flex; align-items: center;
+            background: var(--card-bg); 
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid var(--card-border);
+            border-radius: 99px; padding: 4px;
+            box-shadow: var(--glass-shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .radar-container {
-            position: relative; width: 80px; height: 80px; border: 1px solid var(--radar-line);
-            border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;
+        .nav-capsule:hover {
+            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.4);
+            transform: translateY(-1px);
         }
-        .radar-container::before { content: ''; position: absolute; width: 60%; height: 60%; border: 1px solid var(--radar-line); border-radius: 50%; }
-        .radar-scan {
-            position: absolute; width: 100%; height: 100%; background: conic-gradient(transparent 270deg, rgba(99, 102, 241, 0.4));
-            border-radius: 50%; animation: radarSpin 2s linear infinite;
+        .nav-item {
+            width: 40px; height: 40px; display: flex; justify-content: center; align-items: center;
+            border-radius: 50%; cursor: pointer; color: var(--text-secondary);
+            transition: all 0.2s; font-size: 18px; border: none; background: transparent; outline: none;
         }
-        .radar-dot { width: 8px; height: 8px; background: #6366f1; border-radius: 50%; box-shadow: 0 0 10px #6366f1; }
-        @keyframes radarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .nav-item:hover { background: rgba(99, 102, 241, 0.15); color: #6366f1; transform: scale(1.05); }
+        .nav-item { -webkit-tap-highlight-color: transparent; }
+        .nav-divider { width: 1px; height: 18px; background-color: var(--text-secondary); opacity: 0.2; margin: 0 4px; }
 
-        /* --- 日期选择器 --- */
-        .custom-picker .el-input__wrapper { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
-        .custom-picker .el-input__inner {
-            color: var(--text-primary) !important; font-size: 15px !important; font-weight: 700 !important;
-            font-family: "PingFang SC", monospace; text-align: center !important; height: 32px !important;
-            line-height: 32px !important; letter-spacing: 0.02em;
+        @media (max-width: 640px) {
+            .nav-capsule { top: 16px; right: 16px; padding: 2px; transform: scale(0.9); transform-origin: top right; }
+            .nav-item { width: 36px; height: 36px; font-size: 16px; }
+            header.main-header { margin-top: 60px !important; }
         }
-        .custom-picker .el-input__prefix, .custom-picker .el-input__suffix { display: none; }
-        .glass-popper {
-            backdrop-filter: blur(20px); background: rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid rgba(255, 255, 255, 0.5) !important; box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important;
-            border-radius: 16px !important; margin-left: 0 !important; 
-        }
-        html.dark .glass-popper { background: rgba(30, 41, 59, 0.9) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }
-        .glass-popper .el-date-table td.current .el-date-table-cell__text {
-            background: var(--accent-gradient) !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
-            font-weight: 800; border: none; color: #fff !important;
-        }
-        .glass-popper .el-date-picker__header-label:hover { color: #6366f1 !important; }
 
-        /* --- 控制栏 --- */
+        /* --- [核心] 全局灵动岛 (Toast) --- */
+        .dynamic-island {
+            position: fixed; top: 12px; left: 50%; transform: translateX(-50%) scale(0.8);
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px);
+            color: white; padding: 0; border-radius: 99px; z-index: 9999;
+            width: auto; max-width: 90vw; height: 36px; opacity: 0; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            transition: 
+                transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.3s ease,
+                background-color 0.5s ease,
+                color 0.5s ease;
+        }
+        .dynamic-island.active {
+            transform: translateX(-50%) scale(1);
+            opacity: 1; height: 42px; padding: 0 24px;
+        }
+        .island-content { 
+            font-size: 13px; font-weight: 600; letter-spacing: 0.05em; 
+            display: flex; align-items: center; gap: 10px; white-space: nowrap;
+        }
+        html.dark .dynamic-island { background: rgba(255, 255, 255, 0.95); color: #020617; }
+
+        /* --- 股票卡片 --- */
+        .stock-card {
+            background: var(--card-bg); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--card-border); box-shadow: var(--glass-shadow);
+            border-radius: 24px; padding: 28px; display: flex; flex-direction: column;
+            min-height: 540px; height: auto; position: relative; cursor: default;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .stock-card:hover, .stock-card.active-card {
+            transform: translateY(-8px) scale(1.02); 
+            border-color: rgba(99, 102, 241, 0.5); 
+            box-shadow: 0 20px 60px -10px rgba(99, 102, 241, 0.25);
+            background: rgba(255, 255, 255, 0.65);
+        }
+        html.dark .stock-card:hover, html.dark .stock-card.active-card { 
+            background: rgba(30, 41, 59, 0.6); 
+            border-color: rgba(129, 140, 248, 0.4);
+        }
+        .stock-card:active { transform: translateY(-2px) scale(0.98); }
+
+        .stock-title-link { cursor: pointer; position: relative; display: inline-block; transition: color 0.3s; }
+        .stock-title-link:hover { color: #6366f1; }
+        .stock-title-link::after {
+            content: ''; position: absolute; width: 0; height: 2px; bottom: 0; left: 0;
+            background-color: #6366f1; transition: width 0.3s;
+        }
+        .stock-title-link:hover::after { width: 100%; }
+
+        .external-link-icon {
+            position: absolute; top: 28px; right: 28px; opacity: 0; color: #6366f1;
+            transform: translate(-10px, 10px) scale(0.5); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .stock-card:hover .external-link-icon, .stock-card.active-card .external-link-icon { opacity: 1; transform: translate(0, 0) scale(1.1); }
+
+        .reason-box { flex: 1; margin: 20px 0; }
+        .reason-text { font-size: 15px; line-height: 1.75; color: var(--text-secondary); font-style: italic; text-align: justify; }
+        .card-footer { margin-top: auto; padding-top: 20px; border-top: 1px dashed var(--card-border); }
+        .tag-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        
+        /* 弹窗液态玻璃 */
+        .custom-dialog {
+            border-radius: 24px !important; 
+            background: rgba(255, 255, 255, 0.85) !important; 
+            backdrop-filter: blur(24px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.5) !important;
+            border: none !important;
+            transform: translateZ(0); 
+            will-change: backdrop-filter;
+        }
+        html.dark .custom-dialog { 
+            background: rgba(30, 41, 59, 0.85) !important; 
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+        }
+        .el-dialog__header { margin-right: 0 !important; text-align: center; }
+        .el-dialog__title { font-weight: 900 !important; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
         .control-capsule {
-            background: var(--capsule-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border);
+            background: var(--capsule-bg); backdrop-filter: blur(16px); border: 1px solid var(--card-border);
             border-radius: 99px; padding: 6px 6px 6px 24px; display: inline-flex; align-items: center;
-            gap: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05); transition: transform 0.3s;
+            gap: 12px; box-shadow: var(--glass-shadow); transition: transform 0.3s;
         }
         .control-capsule:hover { transform: translateY(-1px); border-color: #6366f1; }
         .gradient-btn {
@@ -104,77 +210,91 @@
         }
         .gradient-btn:hover { box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); transform: scale(1.02); }
 
-        /* --- 卡片 (增强动画) --- */
-        .stock-card {
-            background: var(--card-bg); backdrop-filter: blur(24px); border: 1px solid var(--card-border);
-            border-radius: 24px; padding: 28px; display: flex; flex-direction: column;
-            min-height: 540px; height: auto; position: relative; cursor: pointer;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        /* 日期选择器 */
+        .custom-picker .el-input__wrapper { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
+        .custom-picker .el-input__inner { color: var(--text-primary) !important; font-size: 15px !important; font-weight: 700 !important; font-family: "PingFang SC", monospace; text-align: center !important; height: 32px !important; line-height: 32px !important; letter-spacing: 0.02em; }
+        .custom-picker .el-input__prefix, .custom-picker .el-input__suffix { display: none; }
         
-        .stock-card:hover,
-        .stock-card.active-card {
-            transform: translateY(-8px) scale(1.02); 
-            border-color: #6366f1; 
-            box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.25);
-            background: rgba(255, 255, 255, 0.85); 
+        .glass-popper {
+            --el-bg-color-overlay: rgba(255, 255, 255, 0.95); --el-border-color-light: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(20px); background-color: var(--el-bg-color-overlay) !important; border: 1px solid var(--el-border-color-light) !important;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important; border-radius: 16px !important; margin-left: 0 !important;
         }
-        html.dark .stock-card:hover,
-        html.dark .stock-card.active-card { background: rgba(30, 41, 59, 0.6); }
-
-        .stock-card:active { transform: translateY(-2px) scale(0.98); }
-
-        /* 图标动画 */
-        .external-link-icon {
-            position: absolute; top: 28px; right: 28px; 
-            opacity: 0; color: #6366f1;
-            transform: translate(-10px, 10px) scale(0.5); 
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        html.dark .glass-popper {
+            --el-bg-color-overlay: rgba(30, 41, 59, 0.95); --el-border-color-light: rgba(255, 255, 255, 0.1);
+            --el-text-color-regular: #f8fafc; --el-text-color-primary: #f8fafc;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4) !important;
         }
-        .stock-card:hover .external-link-icon,
-        .stock-card.active-card .external-link-icon { 
-            opacity: 1; 
-            transform: translate(0, 0) scale(1.1); 
-        }
-
-        .reason-box { flex: 1; margin: 20px 0; }
-        .reason-text { font-size: 15px; line-height: 1.75; color: var(--text-secondary); font-style: italic; text-align: justify; }
-        .card-footer { margin-top: auto; padding-top: 20px; border-top: 1px dashed var(--card-border); }
-        .tag-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .glass-popper .el-date-table td.current .el-date-table-cell__text { background: var(--accent-gradient) !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); font-weight: 800; border: none; color: #fff !important; }
+        .glass-popper .el-date-table td.today .el-date-table-cell__text { font-weight: 700; }
+        .glass-popper .el-date-table td:hover .el-date-table-cell__text { color: #6366f1 !important; }
+        html.dark .glass-popper .el-date-table td:hover .el-date-table-cell__text { color: #818cf8 !important; }
+        .glass-popper .el-date-picker__header-label:hover { color: #6366f1 !important; }
         
-        .theme-float-btn {
-            position: fixed; top: 24px; right: 24px; z-index: 50; width: 44px; height: 44px;
-            border-radius: 50%; background: var(--card-bg); border: 1px solid var(--card-border);
-            backdrop-filter: blur(10px); display: flex; justify-content: center; align-items: center;
-            cursor: pointer; font-size: 20px; transition: all 0.3s;
-        }
-        .theme-float-btn:hover { background: rgba(99,102,241,0.1); transform: rotate(15deg); }
+        /* Tooltip 夜间修复 */
+        html.dark .el-popper.is-light { background: rgba(255, 255, 255, 0.9) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; color: #020617 !important; }
+        html.dark .el-popper.is-light .el-popper__arrow::before { background: rgba(255, 255, 255, 0.9) !important; border-color: rgba(255, 255, 255, 0.2) !important; }
+        .el-popper.is-pure { padding: 5px 11px; }
 
-        /* [新增] 数字字体 */
         .font-num { font-family: 'SF Mono', 'Roboto Mono', Menlo, monospace; }
+        .score-gradient-text { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
         
-        /* 90分文字特效 */
-        .score-gradient-text {
-            background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900;
-        }
+        .empty-state-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 32px; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; box-shadow: 0 20px 50px -10px rgba(0,0,0,0.05); }
+        .radar-container { position: relative; width: 80px; height: 80px; border: 1px solid var(--radar-line); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
+        .radar-container::before { content: ''; position: absolute; width: 60%; height: 60%; border: 1px solid var(--radar-line); border-radius: 50%; }
+        .radar-scan { position: absolute; width: 100%; height: 100%; background: conic-gradient(transparent 270deg, rgba(99, 102, 241, 0.4)); border-radius: 50%; animation: radarSpin 2s linear infinite; }
+        .radar-dot { width: 8px; height: 8px; background: #6366f1; border-radius: 50%; box-shadow: 0 0 10px #6366f1; }
     </style>
 </head>
 <body>
+
+<div class="liquid-bg-layer">
+    <div class="liquid-blob blob-1"></div>
+    <div class="liquid-blob blob-2"></div>
+    <div class="liquid-blob blob-3"></div>
+</div>
 
 <div id="global-loader">
     <div class="loader-spinner"></div>
     <p class="loader-text">AI 引擎初始化中...</p>
 </div>
 
-<div id="app" v-cloak class="min-h-screen w-full flex flex-col items-center py-10 px-6">
+<div id="app" v-cloak class="min-h-screen w-full flex flex-col items-center py-10 px-6 relative z-10">
     
     <el-config-provider :locale="locale">
         
-        <button @click="toggleTheme" class="theme-float-btn shadow-sm">
-            <span v-if="isDark">🌙</span><span v-else>☀️</span>
-        </button>
+        <div class="dynamic-island" :class="{ 'active': island.show }">
+            <div class="island-content">
+                <span class="flex items-center gap-2">
+                    <span v-html="island.icon"></span> {{ island.text }}
+                </span>
+            </div>
+        </div>
 
-        <header class="text-center flex-shrink-0 animate-fade-in-up mb-8">
+        <div class="nav-capsule">
+            <el-tooltip :disabled="isMobile" content="关注公众号" placement="bottom" :show-after="200" effect="light">
+                <button @click="triggerIsland('gzh')" class="nav-item">
+                    <span class="text-xl">💬</span>
+                </button>
+            </el-tooltip>
+            
+            <el-tooltip :disabled="isMobile" content="支持作者" placement="bottom" :show-after="200" effect="light">
+                <button @click="triggerIsland('reward')" class="nav-item">
+                    <span class="text-xl">🧡</span>
+                </button>
+            </el-tooltip>
+            
+            <div class="nav-divider"></div>
+            
+            <el-tooltip :disabled="isMobile" content="切换主题" placement="bottom" :show-after="200" effect="light">
+                <button @click="toggleTheme" class="nav-item">
+                    <span v-if="isDark" class="text-lg">🌙</span>
+                    <span v-else class="text-lg">☀️</span>
+                </button>
+            </el-tooltip>
+        </div>
+
+        <header class="main-header text-center flex-shrink-0 animate-fade-in-up mb-8">
             <h1 class="text-4xl md:text-6xl mb-3 main-title title-gradient">AI 股市雷达</h1>
             <p class="text-xs font-bold tracking-[0.4em] uppercase opacity-40" style="color: var(--text-secondary)">
                 Quant Analysis • Gemini 3 Pro
@@ -196,18 +316,14 @@
                         :editable="false"
                         class="custom-picker"
                         style="width: 135px;" 
-                        @change="fetchData"
+                        @change="fetchData(false)"
                         popper-class="glass-popper"
                         placement="bottom"
-                        :popper-options="{
-                            modifiers: [
-                                { name: 'offset', options: { offset: [25, 20] } },
-                            ],
-                        }"
+                        :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [15, 20] } }] }"
                     ></el-date-picker>
                 </div>
                 <div class="w-px h-4 bg-gray-400/30 hidden md:block"></div>
-                <el-button class="gradient-btn" :loading="loading" @click="fetchData" round>
+                <el-button class="gradient-btn" :loading="loading" @click="fetchData(false)" round>
                     同步策略
                 </el-button>
             </div>
@@ -220,24 +336,15 @@
                     :key="stock.code" 
                     class="stock-card group" 
                     ref="stockCards"
-                    @click="goToQuote(stock.code)" 
-                    title="点击查看雪球实时行情"
+                    @click="copyStockCode(stock)"
                 >
-                    
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6 external-link-icon">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                     </svg>
 
                     <div class="flex gap-2 mb-4">
                         <template v-if="stock.tags && stock.tags.length">
-                            <span 
-                                v-for="(tag, index) in stock.tags" 
-                                :key="index"
-                                class="tag-pill"
-                                :class="getTagClass(index)"
-                            >
-                                {{ tag }}
-                            </span>
+                            <span v-for="(tag, index) in stock.tags" :key="index" class="tag-pill" :class="getTagClass(index)">{{ tag }}</span>
                         </template>
                         <template v-else>
                             <span class="tag-pill bg-blue-500/10 text-blue-600 dark:text-blue-400">沪深主板</span>
@@ -248,34 +355,30 @@
                     
                     <div class="flex justify-between items-end mb-4">
                         <div>
-                            <h3 class="text-3xl font-black tracking-tight group-hover:text-indigo-500 transition-colors mb-1">{{ stock.name }}</h3>
+                            <h3 
+                                class="text-3xl font-black tracking-tight mb-1 stock-title-link"
+                                @click.stop="goToQuote(stock.code)"
+                                title="点击查看详情"
+                            >
+                                {{ stock.name }}
+                            </h3>
                             
                             <div class="flex items-center gap-2 opacity-60">
                                 <span class="font-mono text-sm font-bold tracking-widest text-indigo-500 bg-indigo-500/10 px-1.5 py-0.5 rounded">{{ stock.code }}</span>
                                 <span v-if="stock.price" class="font-num text-sm font-bold tracking-tight">
-                                    ¥{{ stock.price }}
+                                    <span class="text-[10px] font-normal opacity-60 mr-0.5">收</span>¥{{ stock.price }}
                                 </span>
                             </div>
                         </div>
                         <div class="text-right">
                             <div class="text-[10px] font-bold uppercase opacity-40 mb-1">AI 信心指数</div>
-                            <div 
-                                class="text-2xl font-black transition-colors duration-300" 
-                                :class="{ 'score-gradient-text': stock.score >= 90 }"
-                                :style="stock.score < 90 ? { color: getScoreColor(stock.score) } : {}"
-                            >
+                            <div class="text-2xl font-black transition-colors duration-300" :class="{ 'score-gradient-text': stock.score >= 90 }" :style="stock.score < 90 ? { color: getScoreColor(stock.score) } : {}">
                                 {{ stock.score }}%
                             </div>
                         </div>
                     </div>
                     
-                    <el-progress 
-                        :percentage="stock.score" 
-                        :show-text="false" 
-                        :stroke-width="4" 
-                        :color="getScoreColor(stock.score)" 
-                        class="opacity-90"
-                    ></el-progress>
+                    <el-progress :percentage="stock.score" :show-text="false" :stroke-width="4" :color="getScoreColor(stock.score)" class="opacity-90"></el-progress>
 
                     <div class="reason-box">
                         <p class="reason-text">“ {{ stock.reason }} ”</p>
@@ -309,6 +412,33 @@
             </div>
         </div>
 
+        <el-dialog v-model="showGzh" title="关注 AI 狠话" width="320px" center class="custom-dialog" align-center>
+            <div class="flex flex-col items-center pb-4">
+                <div class="w-16 h-16 rounded-full overflow-hidden mb-3 border-2 border-indigo-100">
+                    <img src="assets/img/gzh_avtar.png" class="w-full h-full object-cover">
+                </div>
+                <p class="text-sm font-bold mb-1">AI 狠话 | 财经 | 搞钱</p>
+                <p class="text-xs text-gray-500 mb-4">打破信息差，先人一步</p>
+                <div class="w-48 h-48 bg-white p-1 rounded-xl shadow-inner">
+                    <img src="assets/img/gzh_qr.jpg" class="w-full h-full object-contain">
+                </div>
+                <p class="text-xs text-gray-400 mt-3 tracking-widest">长按识别二维码</p>
+            </div>
+        </el-dialog>
+
+        <el-dialog v-model="showReward" title="Flipped 的赞赏码" width="320px" center class="custom-dialog" align-center>
+            <div class="flex flex-col items-center pb-4">
+                <div class="w-16 h-16 rounded-full overflow-hidden mb-3 border-2 border-amber-100">
+                    <img src="assets/img/avtar.jpg" class="w-full h-full object-cover">
+                </div>
+                <p class="text-sm text-gray-500 italic mb-4 px-4 text-center">“ 感谢您的支持，数据将持续进化！ ”</p>
+                <div class="w-48 h-48 bg-white p-1 rounded-xl shadow-inner relative">
+                    <img src="assets/img/reward_qr.jpg" class="w-full h-full object-contain">
+                </div>
+                <p class="text-xs text-amber-500/60 mt-3 font-bold">Buy me a coffee ☕️</p>
+            </div>
+        </el-dialog>
+
         <footer class="text-center text-[10px] tracking-[0.1em] opacity-40 font-medium mt-12 pb-4">
             &copy; 2026 AI 股市雷达 • 由 DeepSeek 与 Gemini 联合驱动
         </footer>
@@ -330,14 +460,86 @@
             const selectedDate = ref(new Date().toISOString().split('T')[0]);
             const stocks = ref([]);
             const loading = ref(false);
-            const stockCards = ref([]); 
-            let observer = null; 
+            const showGzh = ref(false);
+            const showReward = ref(false);
+            const isMobile = ref(window.innerWidth < 640);
+            
+            // 灵动岛统一状态管理
+            const island = ref({ show: false, icon: '', text: '' });
+            let islandTimer = null;
+
+            const showToast = (icon, text, duration = 2000) => {
+                if (islandTimer) clearTimeout(islandTimer);
+                island.value = { show: true, icon, text };
+                islandTimer = setTimeout(() => { island.value.show = false; }, duration);
+            };
+
+            const checkMobile = () => { isMobile.value = window.innerWidth < 640; };
+            window.addEventListener('resize', checkMobile);
+            onUnmounted(() => { window.removeEventListener('resize', checkMobile); });
+
+            // 导航点击处理
+            const triggerIsland = (type) => {
+                if (type === 'gzh') {
+                    showGzh.value = true;
+                    if (isMobile.value) showToast('<span class="text-green-400">💬</span>', '正在关注 AI 狠话');
+                } else if (type === 'reward') {
+                    showReward.value = true;
+                    if (isMobile.value) showToast('<span class="text-amber-400">🧡</span>', '感谢您的支持');
+                }
+            };
 
             const toggleTheme = () => {
                 isDark.value = !isDark.value;
                 document.documentElement.className = isDark.value ? 'dark' : '';
+                // 只有移动端需要显示主题切换提示
+                if (isMobile.value) {
+                    showToast(
+                        isDark.value ? '🌙' : '☀️', 
+                        isDark.value ? '已切换深色模式' : '已切换浅色模式'
+                    );
+                }
             };
 
+            // [核心] 点击卡片：复制股票代码并提示
+            const copyStockCode = (stock) => {
+                // 简单模拟复制逻辑
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(stock.code).then(() => {
+                        showToast('📍', `已锁定目标：${stock.name}`);
+                    }).catch(() => {
+                        showToast('📍', `已选中：${stock.name}`);
+                    });
+                } else {
+                    // 降级处理
+                    showToast('📍', `已选中：${stock.name}`);
+                }
+            };
+
+            // [修改] fetchData 增加 isInitialLoad 参数
+            const fetchData = async (isInitialLoad = false) => {
+                // 如果不是首次加载（即用户点击了按钮），才显示 Toast
+                if (!isInitialLoad) {
+                    showToast('🚀', '正在同步最新策略...');
+                }
+                
+                loading.value = true;
+                try {
+                    const res = await fetch(`data/history.json?t=${Date.now()}`);
+                    if(!res.ok) throw new Error("No Data");
+                    const allData = await res.json();
+                    stocks.value = allData[selectedDate.value]?.stocks || [];
+                    
+                    // 数据加载完后，初始化观察器
+                    initObserver();
+                } catch (e) {
+                    stocks.value = [];
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            // 辅助函数保持不变
             const getScoreColor = (score) => {
                 if (score >= 90) return '#8b5cf6';
                 if (score >= 80) return '#3b82f6';
@@ -346,61 +548,32 @@
                 return '#ef4444';
             };
 
-            // [新增] 动态标签颜色分配器
             const getTagClass = (index) => {
-                const styles = [
-                    'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-                    'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-                    'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                ];
+                const styles = ['bg-blue-500/10 text-blue-600 dark:text-blue-400', 'bg-amber-500/10 text-amber-600 dark:text-amber-400', 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'];
                 return styles[index % styles.length];
             };
 
             const goToQuote = (code) => {
                 let market = 'SH';
-                if (code.startsWith('6') || code.startsWith('9')) { market = 'SH'; } 
-                else if (code.startsWith('0') || code.startsWith('2') || code.startsWith('3')) { market = 'SZ'; } 
-                else if (code.startsWith('4') || code.startsWith('8')) { market = 'BJ'; }
+                if (code.startsWith('6') || code.startsWith('9')) market = 'SH';
+                else if (code.startsWith('0') || code.startsWith('2') || code.startsWith('3')) market = 'SZ';
+                else if (code.startsWith('4') || code.startsWith('8')) market = 'BJ';
                 window.open(`https://xueqiu.com/S/${market}${code}`, '_blank');
             };
 
             const initObserver = () => {
-                if (observer) observer.disconnect();
-                const options = {
-                    root: null,
-                    rootMargin: '-25% 0px -25% 0px', 
-                    threshold: 0.2
-                };
-                observer = new IntersectionObserver((entries) => {
+                const options = { root: null, rootMargin: '-45% 0px -45% 0px', threshold: 0 };
+                const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         if (window.innerWidth < 1024) { 
-                            if (entry.isIntersecting) {
-                                entry.target.classList.add('active-card');
-                            } else {
-                                entry.target.classList.remove('active-card');
-                            }
+                            if (entry.isIntersecting) entry.target.classList.add('active-card');
+                            else entry.target.classList.remove('active-card');
                         }
                     });
                 }, options);
                 nextTick(() => {
-                    const cards = document.querySelectorAll('.stock-card');
-                    cards.forEach(card => observer.observe(card));
+                    document.querySelectorAll('.stock-card').forEach(card => observer.observe(card));
                 });
-            };
-
-            const fetchData = async () => {
-                loading.value = true;
-                try {
-                    const res = await fetch(`data/history.json?t=${Date.now()}`);
-                    if(!res.ok) throw new Error("No Data");
-                    const allData = await res.json();
-                    stocks.value = allData[selectedDate.value]?.stocks || [];
-                    initObserver();
-                } catch (e) {
-                    stocks.value = [];
-                } finally {
-                    loading.value = false;
-                }
             };
 
             onMounted(() => {
@@ -411,18 +584,21 @@
                         setTimeout(() => loader.remove(), 500);
                     }
                 }, 400);
-
-                fetchData();
-
+                
+                // [修改] 首次加载传入 true，不显示 Toast
+                fetchData(true);
+                
                 const style = document.createElement('style');
-                style.innerHTML = `
-                    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-                    .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }
-                `;
+                style.innerHTML = `@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }`;
                 document.head.appendChild(style);
             });
 
-            return { selectedDate, stocks, loading, isDark, toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, stockCards };
+            return { 
+                selectedDate, stocks, loading, isDark, 
+                showGzh, showReward, island, isMobile,
+                toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, 
+                triggerIsland, copyStockCode 
+            };
         }
     }).use(ElementPlus).mount('#app');
 </script>
