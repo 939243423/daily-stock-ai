@@ -54,11 +54,25 @@
         }
         .title-gradient { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
 
-        /* --- [核心策略 1] 移动端：显示液态动画层 --- */
+        /* --- 液态背景：仅移动端显示 --- */
         .liquid-bg-layer {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; overflow: hidden;
             background: var(--bg-body); transition: background 0.5s;
             contain: strict; pointer-events: none;
+        }
+        @media (min-width: 641px) {
+            .liquid-bg-layer { display: none !important; }
+            body {
+                background-image: 
+                    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15), transparent 40%), 
+                    radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15), transparent 40%);
+                background-attachment: fixed; background-size: 100% 100%;
+            }
+            html.dark body {
+                background-image: 
+                    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.08), transparent 45%), 
+                    radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.08), transparent 45%);
+            }
         }
 
         .liquid-blob {
@@ -70,28 +84,6 @@
 
         .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: rgba(99, 102, 241, 0.4); animation-duration: 45s; }
         .blob-2 { bottom: -10%; right: -10%; width: 80vw; height: 80vw; background: rgba(6, 182, 212, 0.3); animation-duration: 55s; animation-delay: -5s; }
-
-        /* --- [核心策略 2] PC端：隐藏动画层，使用 CSS 渐变模拟背景 (0性能消耗) --- */
-        @media (min-width: 641px) {
-            /* 1. 彻底隐藏移动端的 DOM 动画层 */
-            .liquid-bg-layer { display: none !important; }
-
-            /* 2. 在 Body 上直接绘制静态光斑 (高性能) */
-            body {
-                background-image: 
-                    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15), transparent 40%), 
-                    radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15), transparent 40%);
-                background-attachment: fixed; /* 背景固定，滚动时不重绘 */
-                background-size: 100% 100%;
-            }
-            
-            /* 暗色模式下的 PC 背景 */
-            html.dark body {
-                background-image: 
-                    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.08), transparent 45%), 
-                    radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.08), transparent 45%);
-            }
-        }
 
         /* --- Loading --- */
         #global-loader {
@@ -120,6 +112,7 @@
             transition: all 0.2s; font-size: 18px; border: none; background: transparent; outline: none; -webkit-tap-highlight-color: transparent;
         }
         .nav-item:hover { background: rgba(99, 102, 241, 0.15); color: #6366f1; transform: scale(1.05); }
+        .nav-item { -webkit-tap-highlight-color: transparent; }
         .nav-divider { width: 1px; height: 18px; background-color: var(--text-secondary); opacity: 0.2; margin: 0 4px; }
 
         @media (max-width: 640px) {
@@ -153,23 +146,16 @@
             border-radius: 24px; padding: 28px; display: flex; flex-direction: column;
             min-height: 540px; height: auto; position: relative; cursor: default;
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            /* 性能关键：不可见时不渲染 */
             content-visibility: auto; contain-intrinsic-size: 1px 540px;
         }
-
-        /* 移动端: 纯色背景 (防卡顿) */
         @media (max-width: 640px) {
-            .stock-card {
-                backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
-                background: var(--card-bg-mobile) !important;
-            }
+            .stock-card { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--card-bg-mobile) !important; }
         }
 
         .stock-card:hover, .stock-card.active-card {
             transform: translateY(-8px) scale(1.02); border-color: rgba(99, 102, 241, 0.5); 
             box-shadow: 0 20px 60px -10px rgba(99, 102, 241, 0.25);
         }
-        /* PC端 Hover */
         @media (min-width: 641px) {
             .stock-card:hover { background: rgba(255, 255, 255, 0.65); }
             html.dark .stock-card:hover { background: rgba(30, 41, 59, 0.6); }
@@ -263,7 +249,7 @@
         <div class="dynamic-island" :class="{ 'active': activeIsland }">
             <div class="island-content">
                 <span class="flex items-center gap-2">
-                    <span v-html="islandContent.icon"></span> {{ islandContent.text }}
+                    <span v-html="displayContent.icon"></span> {{ displayContent.text }}
                 </span>
             </div>
         </div>
@@ -412,7 +398,7 @@
 
         <el-dialog v-model="showGzh" title="关注 AI 狠话" width="320px" center class="custom-dialog" align-center>
             <div class="flex flex-col items-center pb-4">
-                <div class="w-16 h-16 rounded-full overflow-hidden mb-3 border-2 border-indigo-100">
+                <div class="w-16 h-16 rounded-full overflow-hidden mb-3 border-2 border-indigo-100 cursor-pointer transition-transform hover:scale-105" @click="goToGzhArticle">
                     <img src="assets/img/gzh_avtar.png" class="w-full h-full object-cover">
                 </div>
                 <p class="text-sm font-bold mb-1">AI 狠话 | 财经 | 搞钱</p>
@@ -449,7 +435,7 @@
 <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.min.js"></script>
 
 <script>
-    const { createApp, ref, computed, onMounted, nextTick, onUnmounted } = Vue;
+    const { createApp, ref, computed, watch, onMounted, nextTick, onUnmounted } = Vue;
 
     createApp({
         setup() {
@@ -465,27 +451,42 @@
             
             const toastState = ref({ show: false, icon: '', text: '' });
             let toastTimer = null;
+            
+            // [核心] 视觉暂留内容
+            const displayContent = ref({ icon: '', text: '' });
 
             const activeIsland = computed(() => {
                 if (isMobile.value && (showGzh.value || showReward.value)) return true;
                 return toastState.value.show;
             });
 
-            const islandContent = computed(() => {
-                if (isMobile.value && showGzh.value) {
-                    return { icon: '<span class="text-green-400">💬</span>', text: '正在关注 AI 狠话' };
-                }
-                if (isMobile.value && showReward.value) {
-                    return { icon: '<span class="text-amber-400">🧡</span>', text: '感谢您的支持' };
-                }
-                return { icon: toastState.value.icon, text: toastState.value.text };
-            });
+            // [核心] 监听状态，更新内容，实现视觉暂留
+            watch(
+                () => [isMobile.value, showGzh.value, showReward.value, toastState.value.show, toastState.value.text],
+                () => {
+                    if (isMobile.value && showGzh.value) {
+                        displayContent.value = { icon: '<span class="text-green-400">💬</span>', text: '正在关注 AI 狠话' };
+                    } else if (isMobile.value && showReward.value) {
+                        displayContent.value = { icon: '<span class="text-amber-400">🧡</span>', text: '感谢您的支持' };
+                    } else if (toastState.value.show) {
+                        displayContent.value = { icon: toastState.value.icon, text: toastState.value.text };
+                    }
+                    // 注意：当所有状态都为 false 时，不更新 displayContent，保留最后一帧内容
+                },
+                { immediate: true }
+            );
 
             const showToast = (icon, text, duration = 2000) => {
                 if (showGzh.value || showReward.value) return;
+                
                 if (toastTimer) clearTimeout(toastTimer);
                 toastState.value = { show: true, icon, text };
                 toastTimer = setTimeout(() => { toastState.value.show = false; }, duration);
+            };
+
+            const clearToast = () => {
+                if (toastTimer) clearTimeout(toastTimer);
+                toastState.value.show = false;
             };
 
             const checkMobile = () => { isMobile.value = window.innerWidth < 640; };
@@ -493,8 +494,14 @@
             onUnmounted(() => { window.removeEventListener('resize', checkMobile); });
 
             const triggerIsland = (type) => {
+                clearToast(); // 清除旧 Toast
                 if (type === 'gzh') showGzh.value = true;
                 else if (type === 'reward') showReward.value = true;
+            };
+
+            // [新增] 跳转公众号文章
+            const goToGzhArticle = () => {
+                window.open('https://mp.weixin.qq.com/s/4JjCjeC2ID372GtJ7fnR1A', '_blank');
             };
 
             const toggleTheme = () => {
@@ -586,9 +593,9 @@
 
             return { 
                 selectedDate, stocks, loading, isDark, 
-                showGzh, showReward, activeIsland, islandContent, isMobile, 
+                showGzh, showReward, activeIsland, displayContent, isMobile, // 导出新状态
                 toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, 
-                triggerIsland, copyStockCode 
+                triggerIsland, copyStockCode, goToGzhArticle 
             };
         }
     }).use(ElementPlus).mount('#app');
