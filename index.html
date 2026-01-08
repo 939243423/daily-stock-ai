@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>AI 股市雷达</title>
+    <title>AI 股市雷达 - 旗舰版</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index-dark.css" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,20 +12,8 @@
         /* --- 基础设置 --- */
         [v-cloak] { display: none !important; }
         
-        /* 关键帧定义 (放在最前) */
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
-        @keyframes floatBlob {
-            0% { transform: translate(0, 0) scale(1) rotate(0deg); }
-            50% { transform: translate(30px, 50px) scale(1.1) rotate(10deg); }
-            100% { transform: translate(-20px, -30px) scale(0.9) rotate(-5deg); }
-        }
-
-        /* [关键修复 1] 修复移动端弹窗打开时页面变窄/抖动 */
-        body.el-popup-parent--hidden {
-            padding-right: 0 !important;
-            overflow: hidden !important;
-        }
+        /* 移动端弹窗防抖动 */
+        body.el-popup-parent--hidden { padding-right: 0 !important; overflow: hidden !important; }
 
         /* --- [核心] 液态背景动画 --- */
         .liquid-bg-layer {
@@ -39,30 +27,29 @@
         .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: rgba(99, 102, 241, 0.3); animation-delay: 0s; }
         .blob-2 { bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: rgba(139, 92, 246, 0.25); animation-delay: -5s; }
         .blob-3 { top: 40%; left: 40%; width: 40vw; height: 40vw; background: rgba(6, 182, 212, 0.2); animation-delay: -10s; }
+        
+        @keyframes floatBlob {
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+            50% { transform: translate(30px, 50px) scale(1.1) rotate(10deg); }
+            100% { transform: translate(-20px, -30px) scale(0.9) rotate(-5deg); }
+        }
 
-        /* --- Loading (修复动画不转的问题) --- */
+        /* --- Loading --- */
         #global-loader {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px);
             z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; transition: opacity 0.5s ease;
         }
         html.dark #global-loader { background: rgba(2, 6, 23, 0.8); }
-        .loader-spinner {
-            width: 44px; height: 44px; border: 4px solid rgba(99, 102, 241, 0.15);
-            border-top: 4px solid #6366f1; border-radius: 50%;
-            animation: spin 0.8s linear infinite; /* [修复] 确保指向正确的关键帧 */
-        }
-        .loader-text {
-            margin-top: 16px; color: #64748b; font-size: 14px; font-weight: 500; letter-spacing: 0.15em;
-            font-family: -apple-system, sans-serif;
-            animation: pulse 1.5s ease-in-out infinite; /* [修复] 呼吸效果 */
-        }
+        .loader-spinner { width: 44px; height: 44px; border: 4px solid rgba(99, 102, 241, 0.15); border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .loader-text { margin-top: 16px; color: #64748b; font-size: 14px; font-weight: 500; letter-spacing: 0.15em; font-family: -apple-system, sans-serif; animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 
         /* --- 变量 --- */
         :root {
             --bg-body: #f0f4f8; --text-primary: #0f172a; --text-secondary: #64748b;
-            --card-bg: rgba(255, 255, 255, 0.45); 
-            --card-border: rgba(255, 255, 255, 0.6);
+            --card-bg: rgba(255, 255, 255, 0.45); --card-border: rgba(255, 255, 255, 0.6);
             --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
             --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
             --btn-gradient: linear-gradient(to right, #4f46e5, #7c3aed); 
@@ -70,8 +57,7 @@
         }
         html.dark {
             --bg-body: #020617; --text-primary: #f8fafc; --text-secondary: #94a3b8;
-            --card-bg: rgba(15, 23, 42, 0.4); 
-            --card-border: rgba(255, 255, 255, 0.08);
+            --card-bg: rgba(15, 23, 42, 0.4); --card-border: rgba(255, 255, 255, 0.08);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
             --accent-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
             --btn-gradient: linear-gradient(to right, #6366f1, #a855f7);
@@ -93,7 +79,7 @@
             border: 1px solid var(--card-border);
             border-radius: 99px; padding: 4px;
             box-shadow: var(--glass-shadow);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .nav-capsule:hover {
             box-shadow: 0 12px 40px rgba(99, 102, 241, 0.15);
@@ -109,13 +95,22 @@
         .nav-item { -webkit-tap-highlight-color: transparent; }
         .nav-divider { width: 1px; height: 18px; background-color: var(--text-secondary); opacity: 0.2; margin: 0 4px; }
 
+        /* [关键] 移动端适配 */
         @media (max-width: 640px) {
-            .nav-capsule { top: 16px; right: 16px; padding: 2px; transform: scale(0.9); transform-origin: top right; }
+            .nav-capsule { 
+                top: 16px; right: 16px; padding: 2px; 
+                transform-origin: top right;
+                transform: scale(0.9); /* 默认缩小 */
+            }
+            /* 激活灵动岛时，Nav 下移，并保持缩放比例，防止跳动 */
+            .nav-capsule.shifted {
+                transform: translateY(50px) scale(0.9) !important;
+            }
             .nav-item { width: 36px; height: 36px; font-size: 16px; }
             header.main-header { margin-top: 60px !important; }
         }
 
-        /* --- [核心] 全局灵动岛 (Toast) --- */
+        /* --- [核心] 移动端灵动岛 --- */
         .dynamic-island {
             position: fixed; top: 12px; left: 50%; transform: translateX(-50%) scale(0.8);
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px);
@@ -138,6 +133,8 @@
             font-size: 13px; font-weight: 600; letter-spacing: 0.05em; 
             display: flex; align-items: center; gap: 10px; white-space: nowrap;
         }
+        
+        @media (min-width: 641px) { .dynamic-island { display: none !important; } }
         html.dark .dynamic-island { background: rgba(255, 255, 255, 0.95); color: #020617; }
 
         /* --- 股票卡片 --- */
@@ -149,29 +146,18 @@
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .stock-card:hover, .stock-card.active-card {
-            transform: translateY(-8px) scale(1.02); 
-            border-color: rgba(99, 102, 241, 0.5); 
-            box-shadow: 0 20px 60px -10px rgba(99, 102, 241, 0.25);
-            background: rgba(255, 255, 255, 0.65);
+            transform: translateY(-8px) scale(1.02); border-color: rgba(99, 102, 241, 0.5); 
+            box-shadow: 0 20px 60px -10px rgba(99, 102, 241, 0.25); background: rgba(255, 255, 255, 0.65);
         }
-        html.dark .stock-card:hover, html.dark .stock-card.active-card { 
-            background: rgba(30, 41, 59, 0.6); 
-            border-color: rgba(129, 140, 248, 0.4);
-        }
+        html.dark .stock-card:hover, html.dark .stock-card.active-card { background: rgba(30, 41, 59, 0.6); border-color: rgba(129, 140, 248, 0.4); }
         .stock-card:active { transform: translateY(-2px) scale(0.98); }
 
         .stock-title-link { cursor: pointer; position: relative; display: inline-block; transition: color 0.3s; }
         .stock-title-link:hover { color: #6366f1; }
-        .stock-title-link::after {
-            content: ''; position: absolute; width: 0; height: 2px; bottom: 0; left: 0;
-            background-color: #6366f1; transition: width 0.3s;
-        }
+        .stock-title-link::after { content: ''; position: absolute; width: 0; height: 2px; bottom: 0; left: 0; background-color: #6366f1; transition: width 0.3s; }
         .stock-title-link:hover::after { width: 100%; }
 
-        .external-link-icon {
-            position: absolute; top: 28px; right: 28px; opacity: 0; color: #6366f1;
-            transform: translate(-10px, 10px) scale(0.5); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        .external-link-icon { position: absolute; top: 28px; right: 28px; opacity: 0; color: #6366f1; transform: translate(-10px, 10px) scale(0.5); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .stock-card:hover .external-link-icon, .stock-card.active-card .external-link-icon { opacity: 1; transform: translate(0, 0) scale(1.1); }
 
         .reason-box { flex: 1; margin: 20px 0; }
@@ -179,7 +165,7 @@
         .card-footer { margin-top: auto; padding-top: 20px; border-top: 1px dashed var(--card-border); }
         .tag-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
         
-        /* 弹窗液态玻璃 */
+        /* [关键修复] 弹窗样式：移除 transform 防止点击失效，提高透明度防止穿透 */
         .custom-dialog {
             border-radius: 24px !important; 
             background: rgba(255, 255, 255, 0.85) !important; 
@@ -187,27 +173,15 @@
             -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
             box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.5) !important;
             border: none !important;
-            transform: translateZ(0); 
-            will-change: backdrop-filter;
+            /* 移除 transform: translateZ(0); */
         }
-        html.dark .custom-dialog { 
-            background: rgba(30, 41, 59, 0.85) !important; 
-            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
-        }
+        html.dark .custom-dialog { background: rgba(30, 41, 59, 0.85) !important; box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important; }
         .el-dialog__header { margin-right: 0 !important; text-align: center; }
         .el-dialog__title { font-weight: 900 !important; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-        .control-capsule {
-            background: var(--capsule-bg); backdrop-filter: blur(16px); border: 1px solid var(--card-border);
-            border-radius: 99px; padding: 6px 6px 6px 24px; display: inline-flex; align-items: center;
-            gap: 12px; box-shadow: var(--glass-shadow); transition: transform 0.3s;
-        }
+        .control-capsule { background: var(--capsule-bg); backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 99px; padding: 6px 6px 6px 24px; display: inline-flex; align-items: center; gap: 12px; box-shadow: var(--glass-shadow); transition: transform 0.3s; }
         .control-capsule:hover { transform: translateY(-1px); border-color: #6366f1; }
-        .gradient-btn {
-            background: var(--btn-gradient) !important; border: none !important; color: white !important;
-            font-weight: 700; font-size: 13px !important; padding: 0 24px !important; height: 36px !important;     
-            border-radius: 99px !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); transition: all 0.3s !important;
-        }
+        .gradient-btn { background: var(--btn-gradient) !important; border: none !important; color: white !important; font-weight: 700; font-size: 13px !important; padding: 0 24px !important; height: 36px !important; border-radius: 99px !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); transition: all 0.3s !important; }
         .gradient-btn:hover { box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); transform: scale(1.02); }
 
         /* 日期选择器 */
@@ -215,6 +189,9 @@
         .custom-picker .el-input__inner { color: var(--text-primary) !important; font-size: 15px !important; font-weight: 700 !important; font-family: "PingFang SC", monospace; text-align: center !important; height: 32px !important; line-height: 32px !important; letter-spacing: 0.02em; }
         .custom-picker .el-input__prefix, .custom-picker .el-input__suffix { display: none; }
         
+        .glass-popper .el-date-table td.today .el-date-table-cell__text { 
+            color: #6366f1 !important; 
+        }
         .glass-popper {
             --el-bg-color-overlay: rgba(255, 255, 255, 0.95); --el-border-color-light: rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(20px); background-color: var(--el-bg-color-overlay) !important; border: 1px solid var(--el-border-color-light) !important;
@@ -232,8 +209,8 @@
         .glass-popper .el-date-picker__header-label:hover { color: #6366f1 !important; }
         
         /* Tooltip 夜间修复 */
-        html.dark .el-popper.is-light { background: rgba(255, 255, 255, 0.9) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; color: #020617 !important; }
-        html.dark .el-popper.is-light .el-popper__arrow::before { background: rgba(255, 255, 255, 0.9) !important; border-color: rgba(255, 255, 255, 0.2) !important; }
+        html.dark .el-popper.is-light { color: #020617 !important; }
+        html.dark .el-popper.is-light .el-popper__arrow::before {  }
         .el-popper.is-pure { padding: 5px 11px; }
 
         .font-num { font-family: 'SF Mono', 'Roboto Mono', Menlo, monospace; }
@@ -263,15 +240,15 @@
     
     <el-config-provider :locale="locale">
         
-        <div class="dynamic-island" :class="{ 'active': island.show }">
+        <div class="dynamic-island" :class="{ 'active': activeIsland }">
             <div class="island-content">
                 <span class="flex items-center gap-2">
-                    <span v-html="island.icon"></span> {{ island.text }}
+                    <span v-html="islandContent.icon"></span> {{ islandContent.text }}
                 </span>
             </div>
         </div>
 
-        <div class="nav-capsule">
+        <div class="nav-capsule" :class="{ 'shifted': isMobile && activeIsland }">
             <el-tooltip :disabled="isMobile" content="关注公众号" placement="bottom" :show-after="200" effect="light">
                 <button @click="triggerIsland('gzh')" class="nav-item">
                     <span class="text-xl">💬</span>
@@ -451,7 +428,7 @@
 <script src="https://unpkg.com/element-plus/dist/locale/zh-cn.min.js"></script>
 
 <script>
-    const { createApp, ref, onMounted, nextTick, onUnmounted } = Vue;
+    const { createApp, ref, computed, onMounted, nextTick, onUnmounted } = Vue;
 
     createApp({
         setup() {
@@ -460,39 +437,54 @@
             const selectedDate = ref(new Date().toISOString().split('T')[0]);
             const stocks = ref([]);
             const loading = ref(false);
+            
             const showGzh = ref(false);
             const showReward = ref(false);
             const isMobile = ref(window.innerWidth < 640);
             
             // 灵动岛统一状态管理
-            const island = ref({ show: false, icon: '', text: '' });
-            let islandTimer = null;
+            const toastState = ref({ show: false, icon: '', text: '' });
+            let toastTimer = null;
+
+            // [核心修正] 灵动岛显示逻辑：优先显示持久弹窗，否则显示 Toast
+            const activeIsland = computed(() => {
+                if (isMobile.value && (showGzh.value || showReward.value)) return true;
+                return toastState.value.show;
+            });
+
+            // 动态内容
+            const islandContent = computed(() => {
+                if (isMobile.value && showGzh.value) {
+                    return { icon: '<span class="text-green-400">💬</span>', text: '正在关注 AI 狠话' };
+                }
+                if (isMobile.value && showReward.value) {
+                    return { icon: '<span class="text-amber-400">🧡</span>', text: '感谢您的支持' };
+                }
+                return { icon: toastState.value.icon, text: toastState.value.text };
+            });
 
             const showToast = (icon, text, duration = 2000) => {
-                if (islandTimer) clearTimeout(islandTimer);
-                island.value = { show: true, icon, text };
-                islandTimer = setTimeout(() => { island.value.show = false; }, duration);
+                // 如果有持久弹窗打开，不显示 Toast
+                if (showGzh.value || showReward.value) return;
+                
+                if (toastTimer) clearTimeout(toastTimer);
+                toastState.value = { show: true, icon, text };
+                toastTimer = setTimeout(() => { toastState.value.show = false; }, duration);
             };
 
             const checkMobile = () => { isMobile.value = window.innerWidth < 640; };
             window.addEventListener('resize', checkMobile);
             onUnmounted(() => { window.removeEventListener('resize', checkMobile); });
 
-            // 导航点击处理
+            // [核心修正] 导航点击只控制状态，不触发 Toast
             const triggerIsland = (type) => {
-                if (type === 'gzh') {
-                    showGzh.value = true;
-                    if (isMobile.value) showToast('<span class="text-green-400">💬</span>', '正在关注 AI 狠话');
-                } else if (type === 'reward') {
-                    showReward.value = true;
-                    if (isMobile.value) showToast('<span class="text-amber-400">🧡</span>', '感谢您的支持');
-                }
+                if (type === 'gzh') showGzh.value = true;
+                else if (type === 'reward') showReward.value = true;
             };
 
             const toggleTheme = () => {
                 isDark.value = !isDark.value;
                 document.documentElement.className = isDark.value ? 'dark' : '';
-                // 只有移动端需要显示主题切换提示
                 if (isMobile.value) {
                     showToast(
                         isDark.value ? '🌙' : '☀️', 
@@ -501,36 +493,24 @@
                 }
             };
 
-            // [核心] 点击卡片：复制股票代码并提示
             const copyStockCode = (stock) => {
-                // 简单模拟复制逻辑
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(stock.code).then(() => {
-                        showToast('📍', `已锁定目标：${stock.name}`);
-                    }).catch(() => {
-                        showToast('📍', `已选中：${stock.name}`);
-                    });
-                } else {
-                    // 降级处理
+                navigator.clipboard.writeText(stock.code).then(() => {
+                    showToast('📍', `已锁定目标：${stock.name}`);
+                }).catch(() => {
                     showToast('📍', `已选中：${stock.name}`);
-                }
+                });
             };
 
-            // [修改] fetchData 增加 isInitialLoad 参数
             const fetchData = async (isInitialLoad = false) => {
-                // 如果不是首次加载（即用户点击了按钮），才显示 Toast
                 if (!isInitialLoad) {
                     showToast('🚀', '正在同步最新策略...');
                 }
-                
                 loading.value = true;
                 try {
                     const res = await fetch(`data/history.json?t=${Date.now()}`);
                     if(!res.ok) throw new Error("No Data");
                     const allData = await res.json();
                     stocks.value = allData[selectedDate.value]?.stocks || [];
-                    
-                    // 数据加载完后，初始化观察器
                     initObserver();
                 } catch (e) {
                     stocks.value = [];
@@ -539,7 +519,6 @@
                 }
             };
 
-            // 辅助函数保持不变
             const getScoreColor = (score) => {
                 if (score >= 90) return '#8b5cf6';
                 if (score >= 80) return '#3b82f6';
@@ -584,10 +563,7 @@
                         setTimeout(() => loader.remove(), 500);
                     }
                 }, 400);
-                
-                // [修改] 首次加载传入 true，不显示 Toast
                 fetchData(true);
-                
                 const style = document.createElement('style');
                 style.innerHTML = `@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }`;
                 document.head.appendChild(style);
@@ -595,7 +571,7 @@
 
             return { 
                 selectedDate, stocks, loading, isDark, 
-                showGzh, showReward, island, isMobile,
+                showGzh, showReward, activeIsland, islandContent, isMobile,
                 toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, 
                 triggerIsland, copyStockCode 
             };
