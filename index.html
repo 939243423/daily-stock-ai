@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-    <title>AI 股市雷达 - 旗舰版</title>
+    <title>AI 股市雷达</title>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index-dark.css" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -186,7 +186,7 @@
         .el-dialog__header { margin-right: 0 !important; text-align: center;padding-right: 0 !important; }
         .el-dialog__title { font-weight: 900 !important; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-        .control-capsule { background: var(--capsule-bg); backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 99px; padding: 6px 6px 6px 24px; display: inline-flex; align-items: center; gap: 12px; box-shadow: var(--glass-shadow); transition: transform 0.3s; }
+        .control-capsule { background: var(--capsule-bg); backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 99px; padding: 6px 6px 6px 20px; display: inline-flex; align-items: center; gap: 12px; box-shadow: var(--glass-shadow); transition: transform 0.3s; }
         .control-capsule:hover { transform: translateY(-1px); border-color: #6366f1; }
         .gradient-btn { background: var(--btn-gradient) !important; border: none !important; color: white !important; font-weight: 700; font-size: 13px !important; padding: 0 24px !important; height: 36px !important; border-radius: 99px !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); transition: all 0.3s !important; }
         .gradient-btn:hover { box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); transform: scale(1.02); }
@@ -306,7 +306,7 @@
                         :clearable="false"
                         :editable="false"
                         class="custom-picker"
-                        style="width: 135px;" 
+                        style="width: 130px;" 
                         @change="fetchData(false)"
                         popper-class="glass-popper"
                         placement="bottom"
