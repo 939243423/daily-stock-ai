@@ -15,41 +15,23 @@
         /* 移动端弹窗防抖动 */
         body.el-popup-parent--hidden { padding-right: 0 !important; overflow: hidden !important; }
 
-        /* --- [核心] 液态背景动画 --- */
-        .liquid-bg-layer {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; overflow: hidden;
-            background: var(--bg-body); transition: background 0.5s;
-        }
-        .liquid-blob {
-            position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.6;
-            animation: floatBlob 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: rgba(99, 102, 241, 0.3); animation-delay: 0s; }
-        .blob-2 { bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: rgba(139, 92, 246, 0.25); animation-delay: -5s; }
-        .blob-3 { top: 40%; left: 40%; width: 40vw; height: 40vw; background: rgba(6, 182, 212, 0.2); animation-delay: -10s; }
-        
-        @keyframes floatBlob {
-            0% { transform: translate(0, 0) scale(1) rotate(0deg); }
-            50% { transform: translate(30px, 50px) scale(1.1) rotate(10deg); }
-            100% { transform: translate(-20px, -30px) scale(0.9) rotate(-5deg); }
-        }
-
-        /* --- Loading --- */
-        #global-loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px);
-            z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; transition: opacity 0.5s ease;
-        }
-        html.dark #global-loader { background: rgba(2, 6, 23, 0.8); }
-        .loader-spinner { width: 44px; height: 44px; border: 4px solid rgba(99, 102, 241, 0.15); border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        .loader-text { margin-top: 16px; color: #64748b; font-size: 14px; font-weight: 500; letter-spacing: 0.15em; font-family: -apple-system, sans-serif; animation: pulse 1.5s ease-in-out infinite; }
+        /* 关键帧定义 */
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+        @keyframes radarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes moveBlob {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            33% { transform: translate3d(30vw, 10vh, 0) scale(1.1); }
+            66% { transform: translate3d(-20vw, 20vh, 0) scale(0.9); }
+            100% { transform: translate3d(10vw, -10vh, 0) scale(1); }
+        }
 
         /* --- 变量 --- */
         :root {
             --bg-body: #f0f4f8; --text-primary: #0f172a; --text-secondary: #64748b;
-            --card-bg: rgba(255, 255, 255, 0.45); --card-border: rgba(255, 255, 255, 0.6);
+            --card-bg: rgba(255, 255, 255, 0.45); 
+            --card-bg-mobile: rgba(255, 255, 255, 0.92);
+            --card-border: rgba(255, 255, 255, 0.6);
             --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
             --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
             --btn-gradient: linear-gradient(to right, #4f46e5, #7c3aed); 
@@ -57,7 +39,9 @@
         }
         html.dark {
             --bg-body: #020617; --text-primary: #f8fafc; --text-secondary: #94a3b8;
-            --card-bg: rgba(15, 23, 42, 0.4); --card-border: rgba(255, 255, 255, 0.08);
+            --card-bg: rgba(15, 23, 42, 0.4); 
+            --card-bg-mobile: rgba(15, 23, 42, 0.95);
+            --card-border: rgba(255, 255, 255, 0.08);
             --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
             --accent-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
             --btn-gradient: linear-gradient(to right, #6366f1, #a855f7);
@@ -69,30 +53,65 @@
         }
         .title-gradient { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
 
+        /* --- [修改] 液态背景：仅移动端显示 --- */
+        .liquid-bg-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; overflow: hidden;
+            background: var(--bg-body); transition: background 0.5s;
+            contain: strict; pointer-events: none;
+        }
+        /* [新增] PC端隐藏流体背景，恢复纯色背景 */
+        @media (min-width: 641px) {
+            .liquid-bg-layer { display: none !important; }
+        }
+
+        .liquid-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px); opacity: 0.6;
+            animation: moveBlob 50s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+            transform: translate3d(0,0,0);
+        }
+        html.dark .liquid-blob { opacity: 0.2; filter: blur(80px); }
+
+        .blob-1 {
+            top: -10%; left: -10%; width: 70vw; height: 70vw;
+            background: rgba(99, 102, 241, 0.4);
+            animation-duration: 45s;
+        }
+        .blob-2 {
+            bottom: -10%; right: -10%; width: 80vw; height: 80vw;
+            background: rgba(6, 182, 212, 0.3);
+            animation-duration: 55s; animation-delay: -5s;
+        }
+
+        /* --- Loading --- */
+        #global-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px);
+            z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; transition: opacity 0.5s ease;
+        }
+        html.dark #global-loader { background: rgba(2, 6, 23, 0.8); }
+        .loader-spinner { width: 44px; height: 44px; border: 4px solid rgba(99, 102, 241, 0.15); border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .loader-text { margin-top: 16px; color: #64748b; font-size: 14px; font-weight: 500; letter-spacing: 0.15em; font-family: -apple-system, sans-serif; animation: pulse 1.5s ease-in-out infinite; }
+
         /* --- 灵动胶囊导航 --- */
         .nav-capsule {
             position: fixed; top: 24px; right: 24px; z-index: 50;
             display: flex; align-items: center;
             background: var(--card-bg); 
-            backdrop-filter: blur(16px) saturate(180%);
-            -webkit-backdrop-filter: blur(16px) saturate(180%);
-            border: 1px solid var(--card-border);
-            border-radius: 99px; padding: 4px;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border); border-radius: 99px; padding: 4px;
             box-shadow: var(--glass-shadow);
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .nav-capsule:hover {
-            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.15);
-            border-color: rgba(99, 102, 241, 0.4);
-            transform: translateY(-1px);
-        }
+        .nav-capsule:hover { box-shadow: 0 12px 40px rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.4); transform: translateY(-1px); }
         .nav-item {
             width: 40px; height: 40px; display: flex; justify-content: center; align-items: center;
             border-radius: 50%; cursor: pointer; color: var(--text-secondary);
-            transition: all 0.2s; font-size: 18px; border: none; background: transparent; outline: none;
+            transition: all 0.2s; font-size: 18px; border: none; background: transparent; outline: none; -webkit-tap-highlight-color: transparent;
         }
         .nav-item:hover { background: rgba(99, 102, 241, 0.15); color: #6366f1; transform: scale(1.05); }
-        .nav-item { -webkit-tap-highlight-color: transparent; }
         .nav-divider { width: 1px; height: 18px; background-color: var(--text-secondary); opacity: 0.2; margin: 0 4px; }
 
         @media (max-width: 640px) {
@@ -102,7 +121,7 @@
             header.main-header { margin-top: 60px !important; }
         }
 
-        /* --- [核心] 全局灵动岛 (Toast) --- */
+        /* --- 灵动岛 --- */
         .dynamic-island {
             position: fixed; top: 12px; left: 50%; transform: translateX(-50%) scale(0.8);
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px);
@@ -110,32 +129,46 @@
             width: auto; max-width: 90vw; height: 36px; opacity: 0; pointer-events: none;
             display: flex; align-items: center; justify-content: center;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .dynamic-island.active {
-            transform: translateX(-50%) scale(1);
-            opacity: 1; height: 42px; padding: 0 24px;
-        }
-        .island-content { 
-            font-size: 13px; font-weight: 600; letter-spacing: 0.05em; 
-            display: flex; align-items: center; gap: 10px; white-space: nowrap;
-        }
+        .dynamic-island.active { transform: translateX(-50%) scale(1); opacity: 1; height: 42px; padding: 0 24px; }
+        .island-content { font-size: 13px; font-weight: 600; letter-spacing: 0.05em; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        @media (min-width: 641px) { .dynamic-island { display: none !important; } }
         html.dark .dynamic-island { background: rgba(255, 255, 255, 0.95); color: #020617; }
 
         /* --- 股票卡片 --- */
         .stock-card {
-            background: var(--card-bg); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+            /* PC端默认背景 (带毛玻璃) */
+            background: var(--card-bg); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            
             border: 1px solid var(--card-border); box-shadow: var(--glass-shadow);
             border-radius: 24px; padding: 28px; display: flex; flex-direction: column;
             min-height: 540px; height: auto; position: relative; cursor: default;
             transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            
+            content-visibility: auto; 
+            contain-intrinsic-size: 1px 540px;
         }
+
+        /* 移动端卡片 (去毛玻璃，纯色背景) */
+        @media (max-width: 640px) {
+            .stock-card {
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                background: var(--card-bg-mobile) !important;
+            }
+        }
+
         .stock-card:hover, .stock-card.active-card {
             transform: translateY(-8px) scale(1.02); border-color: rgba(99, 102, 241, 0.5); 
-            box-shadow: 0 20px 60px -10px rgba(99, 102, 241, 0.25); background: rgba(255, 255, 255, 0.65);
+            box-shadow: 0 20px 60px -10px rgba(99, 102, 241, 0.25);
         }
-        html.dark .stock-card:hover, html.dark .stock-card.active-card { background: rgba(30, 41, 59, 0.6); border-color: rgba(129, 140, 248, 0.4); }
-        .stock-card:active { transform: translateY(-2px) scale(0.98); }
+        /* PC端 Hover 效果 */
+        @media (min-width: 641px) {
+            .stock-card:hover { background: rgba(255, 255, 255, 0.65); }
+            html.dark .stock-card:hover { background: rgba(30, 41, 59, 0.6); }
+        }
 
         .stock-title-link { cursor: pointer; position: relative; display: inline-block; transition: color 0.3s; }
         .stock-title-link:hover { color: #6366f1; }
@@ -150,12 +183,9 @@
         .card-footer { margin-top: auto; padding-top: 20px; border-top: 1px dashed var(--card-border); }
         .tag-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
         
-        /* 弹窗液态玻璃 */
         .custom-dialog {
-            border-radius: 24px !important; 
-            background: rgba(255, 255, 255, 0.85) !important; 
-            backdrop-filter: blur(24px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+            border-radius: 24px !important; background: rgba(255, 255, 255, 0.85) !important; 
+            backdrop-filter: blur(24px) saturate(180%) !important; -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
             box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.5) !important;
             border: none !important;
         }
@@ -205,9 +235,6 @@
         .radar-container::before { content: ''; position: absolute; width: 60%; height: 60%; border: 1px solid var(--radar-line); border-radius: 50%; }
         .radar-scan { position: absolute; width: 100%; height: 100%; background: conic-gradient(transparent 270deg, rgba(99, 102, 241, 0.4)); border-radius: 50%; animation: radarSpin 2s linear infinite; }
         .radar-dot { width: 8px; height: 8px; background: #6366f1; border-radius: 50%; box-shadow: 0 0 10px #6366f1; }
-        
-        /* 关键帧定义 (补回了雷达动画 radarSpin) */
-        @keyframes radarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -215,7 +242,6 @@
 <div class="liquid-bg-layer">
     <div class="liquid-blob blob-1"></div>
     <div class="liquid-blob blob-2"></div>
-    <div class="liquid-blob blob-3"></div>
 </div>
 
 <div id="global-loader">
@@ -425,6 +451,7 @@
             const selectedDate = ref(new Date().toISOString().split('T')[0]);
             const stocks = ref([]);
             const loading = ref(false);
+            
             const showGzh = ref(false);
             const showReward = ref(false);
             const isMobile = ref(window.innerWidth < 640);
