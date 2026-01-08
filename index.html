@@ -191,6 +191,14 @@
         .gradient-btn { background: var(--btn-gradient) !important; border: none !important; color: white !important; font-weight: 700; font-size: 13px !important; padding: 0 24px !important; height: 36px !important; border-radius: 99px !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); transition: all 0.3s !important; }
         .gradient-btn:hover { box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); transform: scale(1.02); }
 
+        /* [核心修改] 按钮固定宽度，防止文字变图标时撑开布局 */
+        .gradient-btn { 
+            background: var(--btn-gradient) !important; border: none !important; color: white !important; 
+            font-weight: 700; font-size: 13px !important; padding: 0 24px !important; height: 36px !important; 
+            border-radius: 99px !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); 
+            transition: all 0.3s !important; 
+            width: 120px !important; /* 固定宽度 */
+        }
         /* 日期选择器 */
         .custom-picker .el-input__wrapper { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
         .custom-picker .el-input__inner { color: var(--text-primary) !important; font-size: 15px !important; font-weight: 700 !important; font-family: "PingFang SC", monospace; text-align: center !important; height: 32px !important; line-height: 32px !important; letter-spacing: 0.02em; }
@@ -302,7 +310,7 @@
                         @change="fetchData(false)"
                         popper-class="glass-popper"
                         placement="bottom"
-                        :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [15, 20] } }] }"
+                        :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [10, 20] } }] }"
                     ></el-date-picker>
                 </div>
                 <div class="w-px h-4 bg-gray-400/30 hidden md:block"></div>
