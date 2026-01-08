@@ -6,7 +6,8 @@ on:
     # 这样可以确保在 09:15 集合竞价前完成分析
     # - cron: '5 1 * * 1-5'
     # - cron: '00 0 * * *'
-    - cron: '42 0 * * 1-5' 
+    # - cron: '42 0 * * 1-5' 
+    - cron: '25 1 * * *' 
   workflow_dispatch: # 允许你手动点击 "Run workflow" 测试
 
 jobs:
