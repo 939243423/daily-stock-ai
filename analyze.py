@@ -193,10 +193,14 @@ def main():
                 else:
                     print(f"   ⚠️ {stock['name']} ({code}): 获取股价失败，保留原值")
 
-        # 5. 写入文件
+        # [修改] 5. 写入文件：路径改为 dist/data/ 下
         today = datetime.datetime.now().strftime("%Y-%m-%d")
-        history_path = 'data/history.json'
-        os.makedirs('data', exist_ok=True)
+        
+        # 修改点 1: 路径前加上 dist/
+        history_path = 'dist/data/history.json' 
+        
+        # 修改点 2: 创建目录也要加上 dist/
+        os.makedirs('dist/data', exist_ok=True)
         
         all_history = {}
         if os.path.exists(history_path):
