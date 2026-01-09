@@ -31,22 +31,31 @@ jobs:
 
       - name: Run AI Analysis
         env:
-          # 确保你在 Repository Secrets 中配置了 GEMINI_API_KEY
+        # 确保你在 Repository Secrets 中配置了 GEMINI_API_KEY
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }} 
         run: python analyze.py
 
-      - name: Commit and Push Data
+      # 1. 先把数据保存回 main 分支 (存档用)
+      - name: Commit Data to Main Branch
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 检查文件是否有变化，防止没有数据更新时报错
-          # [修改] 这里的路径改为 dist/data/history.json
+          # 确保添加的是 dist 下的数据
           git add dist/data/history.json
+          
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Update Daily Stock Recommendations: $(date +'%Y-%m-%d')"
-            git push
+            git commit -m "Update Daily Stock Data: $(date +'%Y-%m-%d')"
+            git push origin main
           fi
+
+      # 2. [新增] 专门把 dist 文件夹发布到 GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist  # 关键：告诉它只发布 dist 文件夹里的内容
+          force_orphan: true   # 每次都是干净的部署，防止历史记录膨胀
