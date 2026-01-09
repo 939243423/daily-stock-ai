@@ -524,7 +524,7 @@
 
             const copyStockCode = (stock) => {
                 navigator.clipboard.writeText(stock.code).then(() => {
-                    showToast('📍', `已锁定目标：${stock.name}`);
+                    showToast('📍', `已复制股票：${stock.name}`);
                 }).catch(() => {
                     showToast('📍', `已选中：${stock.name}`);
                 });
