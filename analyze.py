@@ -43,9 +43,11 @@ def call_gemini(client, prompt):
     """
     # 按照优先级排序的模型列表
     models = [
-        'gemini-2.0-flash-exp', 
-        'gemini-1.5-flash',
-        'gemini-1.5-flash-8b'
+        'gemini-2.0-flash-exp',           # 最新极速版 (抢手，易限流)
+        'gemini-2.0-flash-thinking-exp-1219', # 思考推理版 (强力推荐)
+        'gemini-1.5-pro',                 # 1.5 旗舰版 (稳定，逻辑强)
+        'gemini-1.5-flash',               # 1.5 极速版
+        'gemini-1.0-pro'                  # 1.0 经典版 (最后保底)
     ]
     
     for model_name in models:
@@ -122,28 +124,30 @@ def main():
     # [新增逻辑 1] 读取历史数据，生成排除名单 (黑名单)
     # ==========================================
     history_path = 'dist/data/history.json'
-    excluded_codes = []
+    excluded_items = []     # 存 "中国建筑(601668)" 这种格式
+    excluded_codes_only = [] # 存 "601668" 这种纯代码，用于 Python 校验
     
     if os.path.exists(history_path):
         try:
             with open(history_path, 'r', encoding='utf-8') as f:
                 old_data = json.load(f)
-                # 获取所有历史日期的 keys，并按日期倒序排列
                 sorted_dates = sorted(old_data.keys(), reverse=True)
-                # 只看最近 10 天的数据，防止股票永远被拉黑
-                recent_dates = sorted_dates[:10] 
+                recent_dates = sorted_dates[:5] 
                 
                 for d in recent_dates:
                     stocks = old_data[d].get('stocks', [])
                     for s in stocks:
                         code = s.get('code')
+                        name = s.get('name', '未知股')
                         if code:
-                            excluded_codes.append(code)
+                            # 存入两种格式
+                            excluded_items.append(f"{name}({code})")
+                            excluded_codes_only.append(code)
         except Exception as e:
             print(f"⚠️ 读取历史记录失败，跳过去重: {e}")
 
     # 去重并转为字符串
-    exclusion_str = ", ".join(list(set(excluded_codes))) if excluded_codes else "无"
+    exclusion_str = ", ".join(list(set(excluded_items))) if excluded_items else "无"
     print(f"🚫 本次排除的近期股票: {exclusion_str}")
 
     # ==========================================
