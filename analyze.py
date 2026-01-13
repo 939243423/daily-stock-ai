@@ -132,7 +132,7 @@ def main():
             with open(history_path, 'r', encoding='utf-8') as f:
                 old_data = json.load(f)
                 sorted_dates = sorted(old_data.keys(), reverse=True)
-                recent_dates = sorted_dates[:5] 
+                recent_dates = sorted_dates[:10] 
                 
                 for d in recent_dates:
                     stocks = old_data[d].get('stocks', [])
@@ -229,8 +229,13 @@ def main():
                 else:
                     print(f"   ⚠️ {stock['name']} ({code}): 获取股价失败，保留原值")
 
-        # [修改] 5. 写入文件：路径改为 dist/data/ 下
-        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        # ========================================================
+        # [核心修复] 强制使用北京时间 (UTC+8)
+        # 解决 GitHub Actions 在 UTC 23:xx 运行时日期即使“昨天”的问题
+        # ========================================================
+        utc_now = datetime.datetime.now(datetime.timezone.utc)
+        beijing_now = utc_now + datetime.timedelta(hours=8)
+        today = beijing_now.strftime("%Y-%m-%d")
         
         # 修改点 1: 路径前加上 dist/
         history_path = 'dist/data/history.json' 
@@ -251,7 +256,7 @@ def main():
         with open(history_path, 'w', encoding='utf-8') as f:
             json.dump(all_history, f, ensure_ascii=False, indent=2)
             
-        print(f"✅ 数据更新成功！\n📅 日期: {today}\n🤖 模型: {source}")
+        print(f"✅ 数据更新成功！\n📅 北京时间日期: {today}\n🤖 模型: {source}")
 
     except Exception as e:
         print(f"❌ 数据解析或写入失败: {e}")
