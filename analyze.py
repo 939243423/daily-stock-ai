@@ -130,8 +130,8 @@ def main():
                 old_data = json.load(f)
                 # 获取所有历史日期的 keys，并按日期倒序排列
                 sorted_dates = sorted(old_data.keys(), reverse=True)
-                # 只看最近 5 天的数据，防止股票永远被拉黑
-                recent_dates = sorted_dates[:5] 
+                # 只看最近 10 天的数据，防止股票永远被拉黑
+                recent_dates = sorted_dates[:10] 
                 
                 for d in recent_dates:
                     stocks = old_data[d].get('stocks', [])
@@ -177,8 +177,8 @@ def main():
         {{
           "name": "股票名称",
           "code": "代码",
-          "price": "12.34", 
-          "tags": ["沪深主板", "主力抢筹", "低估值"], 
+          "price": "12.34",  // ⚠️ 必填：截止昨日收盘的参考价格(字符串)
+          "tags": ["沪深主板", "主力抢筹", "低估值"], // ⚠️ 必填：3个简短标签，顺序代表：[1.板块, 2.资金面, 3.基本面]
           "reason": "【估值逻辑+主力迹象】详细分析...",
           "risk": "风险提示...",
           "score": 92 
