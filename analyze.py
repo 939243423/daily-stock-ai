@@ -118,26 +118,58 @@ def main():
         except Exception as e:
             print(f"Gemini Client 初始化失败: {e}")
     
-    # --- 核心 Prompt 修改：增加了 price 和 tags 的明确要求 ---
-    prompt = """
+    # ==========================================
+    # [新增逻辑 1] 读取历史数据，生成排除名单 (黑名单)
+    # ==========================================
+    history_path = 'dist/data/history.json'
+    excluded_codes = []
+    
+    if os.path.exists(history_path):
+        try:
+            with open(history_path, 'r', encoding='utf-8') as f:
+                old_data = json.load(f)
+                # 获取所有历史日期的 keys，并按日期倒序排列
+                sorted_dates = sorted(old_data.keys(), reverse=True)
+                # 只看最近 5 天的数据，防止股票永远被拉黑
+                recent_dates = sorted_dates[:5] 
+                
+                for d in recent_dates:
+                    stocks = old_data[d].get('stocks', [])
+                    for s in stocks:
+                        code = s.get('code')
+                        if code:
+                            excluded_codes.append(code)
+        except Exception as e:
+            print(f"⚠️ 读取历史记录失败，跳过去重: {e}")
+
+    # 去重并转为字符串
+    exclusion_str = ", ".join(list(set(excluded_codes))) if excluded_codes else "无"
+    print(f"🚫 本次排除的近期股票: {exclusion_str}")
+
+    # ==========================================
+    # [修改逻辑 2] 更新 Prompt，加入黑名单和多样性要求
+    # ==========================================
+    prompt = f"""
     你是一位专门服务于普通散户投资者的顶级 A 股策略师。
     请挑选 3 只同时满足以下【硬性门槛】和【选股逻辑】的股票。
 
     【硬性门槛】：
     1. 仅限沪深主板个股（代码 60XXXX 或 00XXXX）。
     2. 禁止推荐科创板、创业板、北交所及港股。
+    3. ⚠️【强制去重】绝对禁止推荐以下近期已出现过的股票代码：{exclusion_str}。请挖掘新的市场机会！
 
     【选股逻辑】：
     1. 估值洼地：处于历史估值底部、破净或低 PE 的行业龙头。
     2. 主力入场：近期成交量异常放大，底部放量，显示大资金建仓。
     3. 安全边际：基本面稳健，避开 ST 和近期暴涨妖股。
 
-    【评分标准】：
-    * 90-99 分 (极高)：梦幻紫 - 完美标的
-    * 80-89 分 (高)：宝石蓝 - 优秀标的
-    * 70-79 分 (中高)：翡翠绿 - 稳健标的
-    * 60-69 分 (中)：活力橙 - 观察标的
-    * < 60 分 (低)：警示红 - 风险标的
+    【评分与多样性要求（重要）】：
+    * 为了体现投资组合的层次感，3 只股票的【AI 信心指数】必须拉开差距，分布在不同区间。
+    * ⚠️ 强制要求：
+        - 1只为【极高信心】(90-99分)：确定性最高的龙头白马。
+        - 1只为【高信心】(80-89分)：攻守兼备的成长股。
+        - 1只为【中高信心】(70-79分)：底部启动的潜力黑马或博弈型标的。
+    * 不要让 3 只股票的分数都挤在同一个评分标准区间！
 
     请严格以下 JSON 格式输出（确保字段完整）：
     {
