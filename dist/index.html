@@ -431,7 +431,22 @@
         </el-dialog>
 
         <footer class="text-center text-[10px] tracking-[0.1em] opacity-40 font-medium mt-12 pb-4">
-            &copy; 2026 AI 股市雷达 • 由 DeepSeek 与 Gemini 联合驱动
+            <p class="mb-2">&copy; 2026 AI 股市雷达 • 由 DeepSeek 与 Gemini 联合驱动</p>
+            
+            <div class="mt-2 flex flex-col gap-1 items-center justify-center">
+                <div class="flex gap-4">
+                     <span id="busuanzi_container_site_pv" style="display:none">
+                        <span class="mr-0.5">👀</span>总访问 <span id="busuanzi_value_site_pv" class="font-num font-bold"></span> 次
+                    </span>
+                    <span id="busuanzi_container_site_uv" style="display:none">
+                        <span class="mr-0.5">👥</span>总访客 <span id="busuanzi_value_site_uv" class="font-num font-bold"></span> 人
+                    </span>
+                </div>
+
+                <div>
+                    <span class="mr-0.5">⏱️</span>已运行 <span id="site_runtime" class="font-num font-bold">{{ runtime }}</span> 天
+                </div>
+            </div>
         </footer>
 
     </el-config-provider>
@@ -452,6 +467,9 @@
             const stocks = ref([]);
             const loading = ref(false);
             
+            // [新增] 网站运行天数
+            const runtime = ref(0);
+
             const showGzh = ref(false);
             const showReward = ref(false);
             const isMobile = ref(window.innerWidth < 640);
@@ -459,7 +477,6 @@
             const toastState = ref({ show: false, icon: '', text: '' });
             let toastTimer = null;
             
-            // [核心] 视觉暂留内容
             const displayContent = ref({ icon: '', text: '' });
 
             const activeIsland = computed(() => {
@@ -467,7 +484,6 @@
                 return toastState.value.show;
             });
 
-            // [核心] 监听状态，更新内容，实现视觉暂留
             watch(
                 () => [isMobile.value, showGzh.value, showReward.value, toastState.value.show, toastState.value.text],
                 () => {
@@ -478,7 +494,6 @@
                     } else if (toastState.value.show) {
                         displayContent.value = { icon: toastState.value.icon, text: toastState.value.text };
                     }
-                    // 注意：当所有状态都为 false 时，不更新 displayContent，保留最后一帧内容
                 },
                 { immediate: true }
             );
@@ -501,12 +516,11 @@
             onUnmounted(() => { window.removeEventListener('resize', checkMobile); });
 
             const triggerIsland = (type) => {
-                clearToast(); // 清除旧 Toast
+                clearToast(); 
                 if (type === 'gzh') showGzh.value = true;
                 else if (type === 'reward') showReward.value = true;
             };
 
-            // [新增] 跳转公众号文章
             const goToGzhArticle = () => {
                 window.open('https://mp.weixin.qq.com/s/4JjCjeC2ID372GtJ7fnR1A', '_blank');
             };
@@ -584,6 +598,16 @@
                 });
             };
 
+            // [新增] 自动计算运营天数
+            const calcRuntime = () => {
+                // 根据您要求的 253 天倒推，建站日期设为 2026-01-06
+                const startTime = new Date("2026-01-06T00:00:00"); 
+                const now = new Date();
+                const diff = now - startTime;
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                runtime.value = days;
+            }
+
             onMounted(() => {
                 setTimeout(() => {
                     const loader = document.getElementById('global-loader');
@@ -593,6 +617,7 @@
                     }
                 }, 400);
                 fetchData(true);
+                calcRuntime(); // 执行时间计算
                 const style = document.createElement('style');
                 style.innerHTML = `@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }`;
                 document.head.appendChild(style);
@@ -600,12 +625,16 @@
 
             return { 
                 selectedDate, stocks, loading, isDark, 
-                showGzh, showReward, activeIsland, displayContent, isMobile, // 导出新状态
+                showGzh, showReward, activeIsland, displayContent, isMobile, 
                 toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, 
-                triggerIsland, copyStockCode, goToGzhArticle 
+                triggerIsland, copyStockCode, goToGzhArticle,
+                runtime // 导出 runtime
             };
         }
     }).use(ElementPlus).mount('#app');
 </script>
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
 </body>
 </html>
