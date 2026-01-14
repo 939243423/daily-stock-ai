@@ -196,22 +196,23 @@ def main():
             "name": "GitHub Models (GPT-5)",
             "key": os.environ.get("GH_TOKEN"),
             "url": "https://models.inference.ai.azure.com",
-            "model": "gpt-5" # 务必确认您的 Token 有 GPT-5 权限，否则改回 gpt-4o
+            "model": "gpt-4o" # 务必确认您的 Token 有 GPT-5 权限，否则改回 gpt-4o
         },
-        # 💎 第二级: ChatAnywhere (GPT Free) - 强力备用
-        {
-            "name": "ChatAnywhere",
-            "key": os.environ.get("CHATANYWHERE_KEY"), 
-            "url": "https://api.chatanywhere.tech/v1",
-            "model": "gpt-3.5-turbo" # 或者是 gpt-4，视您领取的 Key 额度而定
-        },
-        # 🎁 第三级 (A): 阿里通义千问 - 国产兜底
+         # 🎁 第二级 (A): 阿里通义千问 - 国产兜底
         {
             "name": "Alibaba Qwen",
             "key": os.environ.get("DASHSCOPE_API_KEY"),
             "url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
             "model": "qwen-max"
         },
+        # 💎 第三级: ChatAnywhere (GPT Free) - 强力备用
+        {
+            "name": "ChatAnywhere",
+            "key": os.environ.get("CHATANYWHERE_KEY"), 
+            "url": "https://api.chatanywhere.tech/v1",
+            "model": "gpt-3.5-turbo" # 或者是 gpt-4，视您领取的 Key 额度而定
+        },
+       
         # 🎁 第三级 (B): DeepSeek - 国产兜底
         {
             "name": "DeepSeek",
