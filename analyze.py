@@ -84,75 +84,72 @@ def call_gemini(client, prompt):
 
     return None, None
 
-def call_deepseek(api_key, prompt):
-    """DeepSeek 备选方案"""
-    print("🔄 Gemini 全线繁忙，切换至 DeepSeek 备用通道...")
-    url = "https://api.deepseek.com/chat/completions"
+# --- 3. 通用 OpenAI 兼容调用函数 (Level 1-3 主力) ---
+def call_openai_compatible(api_key, base_url, model_name, prompt, source_display_name):
+    """
+    万能接口：支持 GitHub Models, ChatAnywhere, 阿里 Qwen, DeepSeek 等
+    """
+    if not api_key: return None, None
+
+    print(f"🔄 [{source_display_name}] 正在调用 {model_name} ...")
+    
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}"
     }
+    
     payload = {
-        "model": "deepseek-chat",
+        "model": model_name,
         "messages": [
-            {"role": "system", "content": "你是一位精通 A 股量化交易分析的专家。请严格按 JSON 格式回答。"},
+            {"role": "system", "content": "你是一位拥有20年经验的A股量化策略师，擅长挖掘低估值和主力资金流向。请严格遵守JSON格式输出。"},
             {"role": "user", "content": prompt}
         ],
+        "temperature": 0.7,
         "response_format": {"type": "json_object"},
         "max_tokens": 1500
     }
+
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        # ChatAnywhere 或者是 GitHub Models 有时响应较慢，设置 60秒 超时
+        response = requests.post(f"{base_url}/chat/completions", headers=headers, json=payload, timeout=60)
+        
+        if response.status_code != 200:
+            print(f"❌ [{source_display_name}] 失败: {response.status_code} - {str(response.text)[:100]}")
+            return None, None
+            
         res_json = response.json()
-        return res_json['choices'][0]['message']['content'], "DeepSeek"
+        if 'choices' in res_json and len(res_json['choices']) > 0:
+            content = res_json['choices'][0]['message']['content']
+            return content, f"{source_display_name}"
+        else:
+            print(f"❌ [{source_display_name}] 返回为空或格式异常")
+            return None, None
+        
     except Exception as e:
-        print(f"❌ DeepSeek 调用失败: {e}")
+        print(f"❌ [{source_display_name}] 出错: {e}")
         return None, None
 
+# --- 主程序 ---
 def main():
-    gemini_key = os.environ.get("GEMINI_API_KEY")
-    deepseek_key = os.environ.get("DEEPSEEK_API_KEY")
-    
-    client = None
-    if gemini_key:
-        try:
-            client = genai.Client(api_key=gemini_key)
-        except Exception as e:
-            print(f"Gemini Client 初始化失败: {e}")
-    
-    # ==========================================
-    # [新增逻辑 1] 读取历史数据，生成排除名单 (黑名单)
-    # ==========================================
+    # 1. 生成排除名单
     history_path = 'dist/data/history.json'
-    excluded_items = []     # 存 "中国建筑(601668)" 这种格式
-    excluded_codes_only = [] # 存 "601668" 这种纯代码，用于 Python 校验
-    
+    excluded_items = []
+    excluded_codes_only = []
     if os.path.exists(history_path):
         try:
             with open(history_path, 'r', encoding='utf-8') as f:
                 old_data = json.load(f)
-                sorted_dates = sorted(old_data.keys(), reverse=True)
-                recent_dates = sorted_dates[:10] 
-                
-                for d in recent_dates:
-                    stocks = old_data[d].get('stocks', [])
-                    for s in stocks:
-                        code = s.get('code')
-                        name = s.get('name', '未知股')
-                        if code:
-                            # 存入两种格式
-                            excluded_items.append(f"{name}({code})")
-                            excluded_codes_only.append(code)
-        except Exception as e:
-            print(f"⚠️ 读取历史记录失败，跳过去重: {e}")
-
-    # 去重并转为字符串
+                for d in sorted(old_data.keys(), reverse=True)[:10]:
+                    for s in old_data[d].get('stocks', []):
+                        if s.get('code'):
+                            excluded_items.append(f"{s.get('name')}({s.get('code')})")
+                            excluded_codes_only.append(s.get('code'))
+        except: pass
+    
     exclusion_str = ", ".join(list(set(excluded_items))) if excluded_items else "无"
-    print(f"🚫 本次排除的近期股票: {exclusion_str}")
+    print(f"🚫 排除黑名单: {exclusion_str}")
 
-    # ==========================================
-    # [修改逻辑 2] 更新 Prompt，加入黑名单和多样性要求
-    # ==========================================
+    # 2. 准备 Prompt
     prompt = f"""
     你是一位专门服务于普通散户投资者的顶级 A 股策略师。
     请挑选 3 只同时满足以下【硬性门槛】和【选股逻辑】的股票。
@@ -190,77 +187,125 @@ def main():
       ]
     }}
     """
-    
-    res_text, source = None, None
-    
-    if client:
-        res_text, source = call_gemini(client, prompt)
-    
-    if not res_text and deepseek_key:
-        res_text, source = call_deepseek(deepseek_key, prompt)
 
-    if not res_text:
-        print("❌ 致命错误：所有 AI 均无法生成数据。")
+    # 3. === 调整后的开火顺序 ===
+    # 这里的顺序严格对应您的要求
+    providers = [
+        # 🚀 第一级: GitHub Models (GPT-5) - 最强主攻
+        {
+            "name": "GitHub Models (GPT-5)",
+            "key": os.environ.get("GH_TOKEN"),
+            "url": "https://models.inference.ai.azure.com",
+            "model": "gpt-5" # 务必确认您的 Token 有 GPT-5 权限，否则改回 gpt-4o
+        },
+        # 💎 第二级: ChatAnywhere (GPT Free) - 强力备用
+        {
+            "name": "ChatAnywhere",
+            "key": os.environ.get("CHATANYWHERE_KEY"), 
+            "url": "https://api.chatanywhere.tech/v1",
+            "model": "gpt-3.5-turbo" # 或者是 gpt-4，视您领取的 Key 额度而定
+        },
+        # 🎁 第三级 (A): 阿里通义千问 - 国产兜底
+        {
+            "name": "Alibaba Qwen",
+            "key": os.environ.get("DASHSCOPE_API_KEY"),
+            "url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "model": "qwen-max"
+        },
+        # 🎁 第三级 (B): DeepSeek - 国产兜底
+        {
+            "name": "DeepSeek",
+            "key": os.environ.get("DEEPSEEK_API_KEY"),
+            "url": "https://api.deepseek.com",
+            "model": "deepseek-chat"
+        }
+    ]
+
+    final_res = None
+    final_source = None
+
+    # --- 开始逐级发射 ---
+    
+    # 1. 尝试 Level 1 - 3 (OpenAI 兼容通道)
+    for p in providers:
+        if p["key"]:
+            final_res, final_source = call_openai_compatible(
+                p["key"], p["url"], p["model"], prompt, p["name"]
+            )
+            if final_res: 
+                print(f"🎉 {p['name']} 调用成功！停止后续尝试。")
+                break # 成功就跳出循环，不再调用后面的
+        else:
+            print(f"⏭️ {p['name']} 未配置 Key，跳过...")
+
+    # 2. 🛡️ 第四级: Gemini (最后兜底)
+    # 如果前面所有通道都挂了 (final_res 还是 None)，才启动 Gemini
+    if not final_res:
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        if gemini_key:
+            print("⚠️ 前序通道全部失败，启动 Gemini 殿后...")
+            try:
+                client = genai.Client(api_key=gemini_key)
+                final_res, final_source = call_gemini(client, prompt)
+            except Exception as e:
+                print(f"⚠️ Gemini 初始化失败: {e}")
+        else:
+            print("⏭️ Gemini 未配置 Key，无法兜底。")
+
+    # 4. 结果处理
+    if not final_res:
+        print("❌ 致命错误：所有 4 级通道全部失败！请检查 API Key 或网络。")
         return
 
     try:
-        res_text = res_text.strip()
-        if res_text.startswith("```"):
-            lines = res_text.splitlines()
+        # 清洗数据
+        text = final_res.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
             if lines[0].startswith("```"): lines = lines[1:]
             if lines[-1].startswith("```"): lines = lines[:-1]
-            res_text = "\n".join(lines)
+            text = "\n".join(lines)
         
-        data = json.loads(res_text)
+        data = json.loads(text)
         
-        if 'stocks' not in data:
-            print("❌ 数据格式错误：缺少 'stocks' 字段")
-            return
-
-        # [新增] 遍历股票，强制修正为真实价格
+        # 校准股价 & 写入文件
         print("🔍 正在联网校准股价...")
-        for stock in data['stocks']:
+        valid_stocks = []
+        for stock in data.get('stocks', []):
             code = stock.get('code', '')
+            if code in excluded_codes_only:
+                print(f"⚠️ 剔除重复推荐: {stock['name']}")
+                continue
             if code:
                 real_price = get_real_price(code)
-                if real_price:
-                    print(f"   ✅ {stock['name']} ({code}): 修正价格 {stock.get('price')} -> {real_price}")
-                    stock['price'] = real_price
-                else:
-                    print(f"   ⚠️ {stock['name']} ({code}): 获取股价失败，保留原值")
+                if real_price: stock['price'] = real_price
+            valid_stocks.append(stock)
+        
+        data['stocks'] = valid_stocks
+        if not data['stocks']:
+            print("❌ 有效股票为0")
+            return
 
-        # ========================================================
-        # [核心修复] 强制使用北京时间 (UTC+8)
-        # 解决 GitHub Actions 在 UTC 23:xx 运行时日期即使“昨天”的问题
-        # ========================================================
+        # 强制北京时间
         utc_now = datetime.datetime.now(datetime.timezone.utc)
-        beijing_now = utc_now + datetime.timedelta(hours=8)
-        today = beijing_now.strftime("%Y-%m-%d")
+        today = (utc_now + datetime.timedelta(hours=8)).strftime("%Y-%m-%d")
         
-        # 修改点 1: 路径前加上 dist/
-        history_path = 'dist/data/history.json' 
-        
-        # 修改点 2: 创建目录也要加上 dist/
         os.makedirs('dist/data', exist_ok=True)
+        path = 'dist/data/history.json'
+        all_hist = {}
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                try: all_hist = json.load(f)
+                except: pass
         
-        all_history = {}
-        if os.path.exists(history_path):
-            with open(history_path, 'r', encoding='utf-8') as f:
-                try:
-                    all_history = json.load(f)
-                except:
-                    all_history = {}
-
-        all_history[today] = data
-        
-        with open(history_path, 'w', encoding='utf-8') as f:
-            json.dump(all_history, f, ensure_ascii=False, indent=2)
+        all_hist[today] = data
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(all_hist, f, ensure_ascii=False, indent=2)
             
-        print(f"✅ 数据更新成功！\n📅 北京时间日期: {today}\n🤖 模型: {source}")
+        print(f"✅ 成功！来源: {final_source}")
 
     except Exception as e:
-        print(f"❌ 数据解析或写入失败: {e}")
-        print(f"🔍 原始返回内容:\n{res_text}")
+        print(f"❌ 处理失败: {e}")
 
 if __name__ == "__main__":
     main()
