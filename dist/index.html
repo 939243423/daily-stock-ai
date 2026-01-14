@@ -74,10 +74,8 @@
                     radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.08), transparent 45%);
             }
         /* } */
-
-        .model-switch-enter-active,
+        /* .model-switch-enter-active,
         .model-switch-leave-active {
-            /* ease-in-out 让渐变过程两头慢中间快，更自然 */
             transition: opacity 0.5s ease-in-out; 
             display: inline-block;
         }
@@ -85,6 +83,56 @@
         .model-switch-enter-from,
         .model-switch-leave-to {
             opacity: 0;
+        } */
+
+        /* --- 雷达光感扫描动画 (无固定宽度版) --- */
+        .model-switch-enter-active,
+        .model-switch-leave-active {
+            /* 0.8秒的缓动，更有质感 */
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            
+            /* 核心：线性渐变遮罩，两头虚中间实 */
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+            
+            /* 遮罩宽度设为 200% 以便移动扫描 */
+            -webkit-mask-size: 200% 100%;
+            mask-size: 200% 100%;
+            
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            
+            /* 确保文字不换行，防止动画过程中抖动 */
+            white-space: nowrap; 
+        }
+
+        /* === 离开状态 (旧文字) === */
+        /* 从“可见”状态 -> 向右移动并消失 */
+        .model-switch-leave-from {
+            -webkit-mask-position: 50% 0;
+            mask-position: 50% 0;
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .model-switch-leave-to {
+            -webkit-mask-position: 150% 0; /* 遮罩向右移走 */
+            mask-position: 150% 0;
+            opacity: 0;
+            transform: translateX(20px); /* 文字稍微右移，增强动感 */
+        }
+
+        /* 从“隐形”状态(在左边) -> 向右移动并显现 */
+        .model-switch-enter-from {
+            -webkit-mask-position: -50% 0; /* 遮罩在左边等待 */
+            mask-position: -50% 0;
+            opacity: 0;
+            transform: translateX(-20px); /* 文字从左边滑入 */
+        }
+        .model-switch-enter-to {
+            -webkit-mask-position: 50% 0; /* 遮罩归位 */
+            mask-position: 50% 0;
+            opacity: 1;
+            transform: translateX(0);
         }
 
 
@@ -337,7 +385,7 @@
                         @change="fetchData(false)"
                         popper-class="glass-popper"
                         placement="bottom"
-                        :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [10, 20] } }] }"
+                        :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [15, 20] } }] }"
                     ></el-date-picker>
                 </div>
                 <div class="w-px h-4 bg-gray-400/30 hidden md:block"></div>
