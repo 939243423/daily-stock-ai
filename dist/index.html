@@ -75,6 +75,19 @@
             }
         /* } */
 
+        .model-switch-enter-active,
+        .model-switch-leave-active {
+            /* ease-in-out 让渐变过程两头慢中间快，更自然 */
+            transition: opacity 0.5s ease-in-out; 
+            display: inline-block;
+        }
+
+        .model-switch-enter-from,
+        .model-switch-leave-to {
+            opacity: 0;
+        }
+
+
         .liquid-blob {
             position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.3;
             animation: moveBlob 40s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
@@ -292,8 +305,17 @@
 
         <header class="main-header text-center flex-shrink-0 animate-fade-in-up mb-8">
             <h1 class="text-4xl md:text-6xl mb-3 main-title title-gradient">AI 股市雷达</h1>
-            <p class="text-[10px] md:text-xs font-bold tracking-[0.2em] md:tracking-[0.4em] uppercase opacity-40 whitespace-nowrap overflow-hidden" style="color: var(--text-secondary)">
-                Quant Analysis • Gemini 3 Pro
+            <p class="h-6 mt-1 text-[10px] md:text-xs font-bold tracking-[0.15em] uppercase opacity-60 flex justify-center items-center gap-2 overflow-hidden" style="color: var(--text-secondary)">
+                <span>Quant Analysis •</span>
+                
+                <transition name="model-switch" mode="out-in">
+                    <span 
+                        :key="currentModelIndex" 
+                        class="inline-block text-indigo-500 font-black text-left whitespace-nowrap"
+                    >
+                        {{ currentModelName }}
+                    </span>
+                </transition>
             </p>
         </header>
 
@@ -480,7 +502,15 @@
         </el-dialog>
 
         <footer class="text-center text-[10px] tracking-[0.1em] opacity-40 font-medium mt-12 pb-4">
-            <p class="mb-2">&copy; 2026 AI 股市雷达 • 由 DeepSeek 与 Gemini 联合驱动</p>
+            <p class="mb-2 text-[10px] md:text-xs">
+                &copy; 2026 AI 股市雷达 <br class="md:hidden" />
+                <span class="hidden md:inline"> • </span>
+                Powered by 
+                <span class="font-bold text-green-500 hover:text-green-400 transition-colors">GPT-4o</span> / 
+                <span class="font-bold text-blue-600 hover:text-blue-500 transition-colors">Qwen</span> / 
+                <span class="font-bold text-cyan-500 hover:text-cyan-400 transition-colors">DeepSeek</span> / 
+                <span class="font-bold text-indigo-500 hover:text-indigo-400 transition-colors">Gemini</span>
+            </p>
             
             <div class="mt-2 flex flex-col gap-1 items-center justify-center">
                 <div class="flex gap-4">
@@ -515,6 +545,10 @@
             const selectedDate = ref(new Date().toISOString().split('T')[0]);
             const stocks = ref([]);
             const loading = ref(false);
+
+            const models = ['GPT-4o', 'Qwen-Max', 'DeepSeek-V3', 'Gemini Pro'];
+            const currentModelIndex = ref(0);
+            const currentModelName = computed(() => models[currentModelIndex.value]);
             
             // [新增] 网站运行天数
             const runtime = ref(0);
@@ -669,6 +703,9 @@
                         setTimeout(() => loader.remove(), 500);
                     }
                 }, 400);
+                setInterval(() => {
+                    currentModelIndex.value = (currentModelIndex.value + 1) % models.length;
+                }, 8000); // 每 8 秒切换一次
                 fetchData(true);
                 calcRuntime(); // 执行时间计算
                 const style = document.createElement('style');
@@ -678,7 +715,7 @@
 
             return { 
                 selectedDate, stocks, loading, isDark, 
-                showAdvice, showGzh, showReward, activeIsland, displayContent, isMobile, 
+                showAdvice, showGzh, showReward, activeIsland, displayContent, isMobile, currentModelName, currentModelIndex,
                 toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, 
                 triggerIsland, copyStockCode, goToGzhArticle,
                 runtime // 导出 runtime

@@ -191,9 +191,9 @@ def main():
     # 3. === 调整后的开火顺序 ===
     # 这里的顺序严格对应您的要求
     providers = [
-        # 🚀 第一级: GitHub Models (GPT-5) - 最强主攻
+        # 🚀 第一级: GitHub Models (GPT-4) - 最强主攻
         {
-            "name": "GitHub Models (GPT-5)",
+            "name": "GitHub Models (GPT-4)",
             "key": os.environ.get("GH_TOKEN"),
             "url": "https://models.inference.ai.azure.com",
             "model": "gpt-4o" # 务必确认您的 Token 有 GPT-5 权限，否则改回 gpt-4o
