@@ -263,6 +263,11 @@
         </div>
 
         <div class="nav-capsule" :class="{ 'shifted': isMobile && activeIsland }">
+            <el-tooltip :disabled="isMobile" content="交易心法" placement="bottom" :show-after="200" effect="light">
+                <button @click="triggerIsland('advice')" class="nav-item">
+                    <span class="text-xl">💡</span>
+                </button>
+            </el-tooltip>
             <el-tooltip :disabled="isMobile" content="关注公众号" placement="bottom" :show-after="200" effect="light">
                 <button @click="triggerIsland('gzh')" class="nav-item">
                     <span class="text-xl">💬</span>
@@ -404,6 +409,49 @@
             </div>
         </div>
 
+        <el-dialog v-model="showAdvice" title="AI 交易心法" width="340px" center class="custom-dialog" align-center>
+            <div class="px-2 pb-4">
+                <div class="space-y-3">
+                    <div class="p-3 rounded-2xl bg-indigo-50/80 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50">
+                        <h4 class="font-bold text-indigo-600 dark:text-indigo-400 mb-1 text-sm flex items-center">
+                            <span class="mr-1.5 text-lg">🚫</span> 拒绝盲目追高
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-justify">
+                            不见兔子不撒鹰。先看<b>主力资金</b>是否净流入，确认<b>成交量</b>温和放大（量比>1.5）后再跟随，避免高位接盘。
+                        </p>
+                    </div>
+                    
+                    <div class="p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50">
+                        <h4 class="font-bold text-amber-600 dark:text-amber-400 mb-1 text-sm flex items-center">
+                            <span class="mr-1.5 text-lg">🕐</span> 黄金买点：13:30
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-justify">
+                            早盘诱多陷阱多。建议<b>下午 13:30</b> 后趋势明朗再建仓或补单，不仅安全还能捕捉尾盘主力偷袭机会。
+                        </p>
+                    </div>
+
+                    <div class="p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50">
+                        <h4 class="font-bold text-emerald-600 dark:text-emerald-400 mb-1 text-sm flex items-center">
+                            <span class="mr-1.5 text-lg">💰</span> 黄金卖点：10:30
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-justify">
+                            早盘情绪最亢奋。除<b>封死涨停</b>的龙头外，建议<b>10:30 前</b>冲高时分批减仓止盈，落袋为安。
+                        </p>
+                    </div>
+
+                    <div class="p-3 rounded-2xl bg-rose-50/80 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800/50">
+                        <h4 class="font-bold text-rose-600 dark:text-rose-400 mb-1 text-sm flex items-center">
+                            <span class="mr-1.5 text-lg">🛡️</span> 严格止损
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-justify">
+                            交易不是赌博。设定<b>-5% 硬性止损线</b>，破位坚决离场。留得青山在，不怕没柴烧。
+                        </p>
+                    </div>
+                </div>
+                <p class="text-[10px] text-center mt-4 opacity-40 tracking-widest">知行合一 • 顺势而为</p>
+            </div>
+        </el-dialog>
+
         <el-dialog v-model="showGzh" title="关注 AI 狠话" width="320px" center class="custom-dialog" align-center>
             <div class="flex flex-col items-center pb-4">
                 <div class="w-16 h-16 rounded-full overflow-hidden mb-3 border-2 border-indigo-100 cursor-pointer transition-transform hover:scale-105" @click="goToGzhArticle">
@@ -473,6 +521,7 @@
 
             const showGzh = ref(false);
             const showReward = ref(false);
+            const showAdvice = ref(false);
             const isMobile = ref(window.innerWidth < 640);
             
             const toastState = ref({ show: false, icon: '', text: '' });
@@ -481,17 +530,19 @@
             const displayContent = ref({ icon: '', text: '' });
 
             const activeIsland = computed(() => {
-                if (isMobile.value && (showGzh.value || showReward.value)) return true;
+                if (isMobile.value && (showAdvice.value || showGzh.value || showReward.value)) return true;
                 return toastState.value.show;
             });
 
             watch(
-                () => [isMobile.value, showGzh.value, showReward.value, toastState.value.show, toastState.value.text],
+                () => [isMobile.value,showAdvice.value, showGzh.value, showReward.value, toastState.value.show, toastState.value.text],
                 () => {
                     if (isMobile.value && showGzh.value) {
                         displayContent.value = { icon: '<span class="text-green-400">💬</span>', text: '正在关注 AI 狠话' };
                     } else if (isMobile.value && showReward.value) {
                         displayContent.value = { icon: '<span class="text-amber-400">🧡</span>', text: '感谢您的支持' };
+                    } else if (isMobile.value && showAdvice.value) {
+                        displayContent.value = { icon: '<span class="text-yellow-400">💡</span>', text: '查阅交易心法' };
                     } else if (toastState.value.show) {
                         displayContent.value = { icon: toastState.value.icon, text: toastState.value.text };
                     }
@@ -520,6 +571,7 @@
                 clearToast(); 
                 if (type === 'gzh') showGzh.value = true;
                 else if (type === 'reward') showReward.value = true;
+                else if (type === 'advice') showAdvice.value = true;
             };
 
             const goToGzhArticle = () => {
@@ -626,7 +678,7 @@
 
             return { 
                 selectedDate, stocks, loading, isDark, 
-                showGzh, showReward, activeIsland, displayContent, isMobile, 
+                showAdvice, showGzh, showReward, activeIsland, displayContent, isMobile, 
                 toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, 
                 triggerIsland, copyStockCode, goToGzhArticle,
                 runtime // 导出 runtime
