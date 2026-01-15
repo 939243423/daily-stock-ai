@@ -149,11 +149,18 @@ def main():
     exclusion_str = ", ".join(list(set(excluded_items))) if excluded_items else "无"
     print(f"🚫 排除黑名单: {exclusion_str}")
 
-    # 2. 准备 Prompt
+    # 2. 准备 Prompt (Qwen-Max 专用版：包含情绪 + 详细新闻)
     prompt = f"""
-    你是一位专门服务于普通散户投资者的顶级 A 股策略师。
-    请挑选 3 只同时满足以下【硬性门槛】和【选股逻辑】的股票。
+    你是一位专门服务于 A 股散户的资深量化策略师。请完成【市场研判】与【个股精选】。
 
+    【任务一：市场大势研判 (最重要的风控环节)】
+    请分析昨日/近期 A 股市场的核心情绪。
+    1. 给出市场情绪词 (如：恐慌/贪婪/震荡)。
+    2. ⚠️ 重点：请列出 3-5 条具体的【利好】或【利空】消息摘要（如：央行降准、美联储加息、某行业重大利好等）。
+    3. 给出今日仓位建议。
+
+    【任务二：个股精选】
+    挑选 3 只满足以下条件的股票：
     【硬性门槛】：
     1. 仅限沪深主板个股（代码 60XXXX 或 00XXXX）。
     2. 禁止推荐科创板、创业板、北交所及港股。
@@ -174,6 +181,17 @@ def main():
 
     请严格以下 JSON 格式输出（确保字段完整）：
     {{
+      "market": {{
+        "sentiment": "恐慌 / 谨慎 / 中性 / 乐观 / 亢奋",
+        "risk_level": "High", // High(高危/绿色), Medium(震荡/黄色), Low(安全/红色) - 注意A股习惯：安全/上涨用红色
+        "advice": "建议空仓观望...",
+        "analysis": "昨日大盘受...影响缩量下跌...",
+        "news": [  // ⚠️ 新闻轮播列表
+           {{ "type": "bull", "content": "利好：央行意外降准0.5个百分点，释放长期资金" }},
+           {{ "type": "bear", "content": "利空：北向资金昨日净流出超100亿" }},
+           {{ "type": "info", "content": "消息：半导体板块受资金追捧，成交额破千亿" }}
+        ]
+      }},
       "stocks": [
         {{
           "name": "股票名称",
@@ -191,19 +209,19 @@ def main():
     # 3. === 调整后的开火顺序 ===
     # 这里的顺序严格对应您的要求
     providers = [
-        # 🚀 第一级: GitHub Models (GPT-4) - 最强主攻
-        {
-            "name": "GitHub Models (GPT-4)",
-            "key": os.environ.get("GH_TOKEN"),
-            "url": "https://models.inference.ai.azure.com",
-            "model": "gpt-4o" # 务必确认您的 Token 有 GPT-5 权限，否则改回 gpt-4o
-        },
-         # 🎁 第二级 (A): 阿里通义千问 - 国产兜底
+         # 🎁 第一级 (A): 阿里通义千问 - 国产兜底
         {
             "name": "Alibaba Qwen",
             "key": os.environ.get("DASHSCOPE_API_KEY"),
             "url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
             "model": "qwen-max"
+        },
+         # 🚀 第二级: GitHub Models (GPT-4) - 最强主攻
+        {
+            "name": "GitHub Models (GPT-4)",
+            "key": os.environ.get("GH_TOKEN"),
+            "url": "https://models.inference.ai.azure.com",
+            "model": "gpt-4o" # 务必确认您的 Token 有 GPT-5 权限，否则改回 gpt-4o
         },
         # 💎 第三级: ChatAnywhere (GPT Free) - 强力备用
         {

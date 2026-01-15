@@ -106,6 +106,34 @@
             white-space: nowrap; 
         }
 
+        /* --- 市场卡片样式 --- */
+        .market-alert-card {
+            background: var(--card-bg); backdrop-filter: blur(20px); 
+            border-radius: 24px; border: 1px solid var(--card-border);
+            box-shadow: var(--glass-shadow);
+        }
+        /* A股颜色习惯：红涨绿跌 */
+        .risk-low { border-left: 5px solid #ef4444; }   /* 红色 = 安全/机会 */
+        .risk-medium { border-left: 5px solid #f59e0b; }/* 黄色 = 震荡 */
+        .risk-high { border-left: 5px solid #22c55e; }  /* 绿色 = 风险/下跌 */
+
+        /* --- 新闻垂直轮播动画 --- */
+        .news-slide-enter-active,
+        .news-slide-leave-active {
+            transition: all 0.5s ease;
+        }
+        .news-slide-enter-from {
+            opacity: 0;
+            transform: translateY(20px); /* 从下方进入 */
+        }
+        .news-slide-leave-to {
+            opacity: 0;
+            transform: translateY(-20px); /* 往上方消失 */
+        }
+        .news-slide-leave-active {
+            position: absolute; /* 关键：离开时脱离文档流，避免挤压 */
+        }
+
         /* === 离开状态 (旧文字) === */
         /* 从“可见”状态 -> 向右移动并消失 */
         .model-switch-leave-from {
@@ -395,6 +423,91 @@
             </div>
         </div>
 
+        <div v-if="marketInfo" class="w-full max-w-7xl animate-fade-in-up flex-shrink-0 mb-8" style="animation-delay: 0.15s;">
+            <div class="market-alert-card relative overflow-hidden transition-all duration-300"
+                 :class="{
+                    'risk-high': marketInfo.risk_level === 'High',    /* 绿色/高危 (A股跌是绿) */
+                    'risk-medium': marketInfo.risk_level === 'Medium', /* 黄色/震荡 */
+                    'risk-low': marketInfo.risk_level === 'Low'       /* 红色/安全 (A股涨是红) */
+                 }">
+                
+                <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full opacity-10 blur-3xl"
+                     :class="{
+                        'bg-green-500': marketInfo.risk_level === 'High',
+                        'bg-yellow-500': marketInfo.risk_level === 'Medium',
+                        'bg-red-500': marketInfo.risk_level === 'Low'
+                     }"></div>
+        
+                <div class="flex flex-col md:flex-row md:items-center justify-between p-6 pb-2 md:pb-6 gap-4 border-b border-black/5 dark:border-white/5">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm"
+                             :class="{
+                                'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400': marketInfo.risk_level === 'High',
+                                'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400': marketInfo.risk_level === 'Medium',
+                                'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400': marketInfo.risk_level === 'Low'
+                             }">
+                            <span v-if="marketInfo.risk_level === 'High'">📉</span>
+                            <span v-else-if="marketInfo.risk_level === 'Medium'">⚖️</span>
+                            <span v-else>🚀</span>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold opacity-50 tracking-widest uppercase mb-0.5">MARKET SENTIMENT</div>
+                            <h3 class="text-xl font-black flex items-center gap-2">
+                                {{ marketInfo.sentiment }}
+                                <span class="text-xs px-2 py-0.5 rounded-full font-bold border"
+                                      :class="{
+                                        'border-green-200 text-green-600 bg-green-50': marketInfo.risk_level === 'High',
+                                        'border-amber-200 text-amber-600 bg-amber-50': marketInfo.risk_level === 'Medium',
+                                        'border-red-200 text-red-600 bg-red-50': marketInfo.risk_level === 'Low'
+                                      }">
+                                     {{ marketInfo.risk_level === 'High' ? '高风险·防御' : (marketInfo.risk_level === 'Medium' ? '震荡·轮动' : '低风险·进攻') }}
+                                </span>
+                            </h3>
+                        </div>
+                    </div>
+        
+                    <div class="text-right hidden md:block">
+                        <p class="text-sm font-bold opacity-60 mb-1">今日策略</p>
+                        <p class="text-lg font-bold"
+                           :class="{
+                              'text-green-600 dark:text-green-400': marketInfo.risk_level === 'High',
+                              'text-amber-600 dark:text-amber-400': marketInfo.risk_level === 'Medium',
+                              'text-red-500 dark:text-red-400': marketInfo.risk_level === 'Low'
+                           }">
+                           “ {{ marketInfo.advice }} ”
+                        </p>
+                    </div>
+                </div>
+        
+                <div class="px-6 py-4 bg-white/40 dark:bg-black/20 flex items-center gap-4 min-h-[60px]">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/20 text-indigo-500 flex items-center justify-center animate-pulse">
+                        🔔
+                    </div>
+                    
+                    <div class="flex-1 h-6 overflow-hidden relative">
+                        <transition-group name="news-slide" tag="div" class="relative w-full h-full">
+                            <div v-for="(news, index) in marketInfo.news" 
+                                 :key="index"
+                                 v-show="index === currentNewsIndex"
+                                 class="absolute w-full flex items-center gap-2"
+                            >
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0"
+                                      :class="{
+                                        'bg-red-100 text-red-600 border-red-200': news.type === 'bull',
+                                        'bg-green-100 text-green-600 border-green-200': news.type === 'bear',
+                                        'bg-blue-100 text-blue-600 border-blue-200': news.type === 'info'
+                                      }">
+                                    {{ news.type === 'bull' ? '利好' : (news.type === 'bear' ? '利空' : '消息') }}
+                                </span>
+                                <span class="text-sm font-medium truncate opacity-90" :title="news.content">
+                                    {{ news.content }}
+                                </span>
+                            </div>
+                        </transition-group>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div v-if="stocks.length" class="w-full max-w-7xl animate-fade-in-up" style="animation-delay: 0.2s;">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
                 <div 
@@ -597,6 +710,9 @@
             const models = ['GPT-4o', 'Qwen-Max', 'DeepSeek-V3', 'Gemini Pro'];
             const currentModelIndex = ref(0);
             const currentModelName = computed(() => models[currentModelIndex.value]);
+
+            const marketInfo = ref(null);
+            const currentNewsIndex = ref(0); // [新增] 控制新闻轮播
             
             // [新增] 网站运行天数
             const runtime = ref(0);
@@ -754,6 +870,12 @@
                 setInterval(() => {
                     currentModelIndex.value = (currentModelIndex.value + 1) % models.length;
                 }, 8000); // 每 8 秒切换一次
+                // [新增] 新闻轮播逻辑：每 3.5 秒切一条
+                setInterval(() => {
+                    if (marketInfo.value && marketInfo.value.news && marketInfo.value.news.length > 1) {
+                        currentNewsIndex.value = (currentNewsIndex.value + 1) % marketInfo.value.news.length;
+                    }
+                }, 3500);
                 fetchData(true);
                 calcRuntime(); // 执行时间计算
                 const style = document.createElement('style');
@@ -762,7 +884,7 @@
             });
 
             return { 
-                selectedDate, stocks, loading, isDark, 
+                selectedDate, stocks, loading, isDark, marketInfo, currentNewsIndex,
                 showAdvice, showGzh, showReward, activeIsland, displayContent, isMobile, currentModelName, currentModelIndex,
                 toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, 
                 triggerIsland, copyStockCode, goToGzhArticle,
