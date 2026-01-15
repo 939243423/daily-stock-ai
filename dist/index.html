@@ -107,32 +107,17 @@
         }
 
         /* --- 市场卡片样式 --- */
-        .market-alert-card {
-            background: var(--card-bg); backdrop-filter: blur(20px); 
-            border-radius: 24px; border: 1px solid var(--card-border);
-            box-shadow: var(--glass-shadow);
-        }
-        /* A股颜色习惯：红涨绿跌 */
-        .risk-low { border-left: 5px solid #ef4444; }   /* 红色 = 安全/机会 */
-        .risk-medium { border-left: 5px solid #f59e0b; }/* 黄色 = 震荡 */
-        .risk-high { border-left: 5px solid #22c55e; }  /* 绿色 = 风险/下跌 */
+        /* 自定义滚动条 */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.5); }
 
-        /* --- 新闻垂直轮播动画 --- */
-        .news-slide-enter-active,
-        .news-slide-leave-active {
-            transition: all 0.5s ease;
-        }
-        .news-slide-enter-from {
-            opacity: 0;
-            transform: translateY(20px); /* 从下方进入 */
-        }
-        .news-slide-leave-to {
-            opacity: 0;
-            transform: translateY(-20px); /* 往上方消失 */
-        }
-        .news-slide-leave-active {
-            position: absolute; /* 关键：离开时脱离文档流，避免挤压 */
-        }
+        /* 轮播动画微调 */
+        .news-slide-enter-active, .news-slide-leave-active { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .news-slide-enter-from { opacity: 0; transform: translateY(100%); }
+        .news-slide-leave-to { opacity: 0; transform: translateY(-100%); }
+        .news-slide-leave-active { position: absolute; }
 
         /* === 离开状态 (旧文字) === */
         /* 从“可见”状态 -> 向右移动并消失 */
@@ -395,7 +380,7 @@
             </p>
         </header>
 
-        <div class="flex justify-center mb-10 flex-shrink-0 animate-fade-in-up" style="animation-delay: 0.1s;">
+        <div class="flex justify-center mb-4 flex-shrink-0 animate-fade-in-up" style="animation-delay: 0.1s;">
             <div class="control-capsule">
                 <div class="flex items-center">
                     <span class="text-base font-bold text-slate-500/80 mr-2 whitespace-nowrap">
@@ -422,92 +407,130 @@
                 </el-button>
             </div>
         </div>
-
-        <div v-if="marketInfo" class="w-full max-w-7xl animate-fade-in-up flex-shrink-0 mb-8" style="animation-delay: 0.15s;">
-            <div class="market-alert-card relative overflow-hidden transition-all duration-300"
-                 :class="{
-                    'risk-high': marketInfo.risk_level === 'High',    /* 绿色/高危 (A股跌是绿) */
-                    'risk-medium': marketInfo.risk_level === 'Medium', /* 黄色/震荡 */
-                    'risk-low': marketInfo.risk_level === 'Low'       /* 红色/安全 (A股涨是红) */
-                 }">
-                
-                <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full opacity-10 blur-3xl"
+        <div v-if="marketInfo" class="w-full max-w-7xl animate-fade-in-up flex-shrink-0 mb-6" style="animation-delay: 0.15s;">
+    
+            <div @click="showMarketDetail = true" 
+                 class="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl p-1.5 flex items-center shadow-sm hover:shadow-md transition-all cursor-pointer group hover:bg-white/80 dark:hover:bg-slate-800/80">
+        
+                <div class="flex-shrink-0 h-9 px-3 md:px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
                      :class="{
-                        'bg-green-500': marketInfo.risk_level === 'High',
-                        'bg-yellow-500': marketInfo.risk_level === 'Medium',
-                        'bg-red-500': marketInfo.risk_level === 'Low'
-                     }"></div>
+                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': marketInfo.risk_level === 'High',
+                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': marketInfo.risk_level === 'Medium',
+                        'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400': marketInfo.risk_level === 'Low'
+                     }">
+                     <span class="text-base font-bold">
+                        {{ marketInfo.risk_level === 'High' ? '⚡' : (marketInfo.risk_level === 'Medium' ? '🔔' : '🚀') }}
+                     </span>
+                     <span class="text-xs font-bold whitespace-nowrap">
+                        <span class="md:hidden">{{ marketInfo.sentiment }}</span>
+                        <span class="hidden md:inline">{{ marketInfo.risk_level === 'High' ? '高风险 · 防御' : (marketInfo.risk_level === 'Medium' ? '震荡市 · 轮动' : '低风险 · 进攻') }}</span>
+                     </span>
+                </div>
         
-                <div class="flex flex-col md:flex-row md:items-center justify-between p-6 pb-2 md:pb-6 gap-4 border-b border-black/5 dark:border-white/5">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-sm"
-                             :class="{
-                                'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400': marketInfo.risk_level === 'High',
-                                'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400': marketInfo.risk_level === 'Medium',
-                                'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400': marketInfo.risk_level === 'Low'
-                             }">
-                            <span v-if="marketInfo.risk_level === 'High'">📉</span>
-                            <span v-else-if="marketInfo.risk_level === 'Medium'">⚖️</span>
-                            <span v-else>🚀</span>
+                <div class="w-px h-5 bg-slate-400/20 mx-3 hidden md:block"></div>
+        
+                <div class="flex-1 h-9 relative overflow-hidden mask-fade-sides">
+                    <transition-group name="news-slide" tag="div" class="relative w-full h-full">
+                        <div v-for="(news, index) in marketInfo.news" 
+                             :key="index"
+                             v-show="index === currentNewsIndex"
+                             class="absolute w-full h-full flex items-center pl-2 md:pl-0"
+                        >
+                            <span class="text-[10px] font-bold mr-2 px-1.5 py-0.5 rounded flex-shrink-0 leading-none"
+                                  :class="{
+                                    'bg-red-50 text-red-600 border border-red-100': news.type === 'bull',
+                                    'bg-green-50 text-green-600 border border-green-100': news.type === 'bear',
+                                    'bg-blue-50 text-blue-600 border border-blue-100': news.type === 'info'
+                                  }">
+                                {{ news.type === 'bull' ? '利好' : (news.type === 'bear' ? '利空' : '消息') }}
+                            </span>
+                            
+                            <span class="text-xs text-slate-600 dark:text-slate-300 truncate font-medium mt-[1px]">
+                                {{ news.content.replace(/^(利好|利空|消息)[:：]\s*/, '') }}
+                            </span>
                         </div>
-                        <div>
-                            <div class="text-xs font-bold opacity-50 tracking-widest uppercase mb-0.5">MARKET SENTIMENT</div>
-                            <h3 class="text-xl font-black flex items-center gap-2">
-                                {{ marketInfo.sentiment }}
-                                <span class="text-xs px-2 py-0.5 rounded-full font-bold border"
-                                      :class="{
-                                        'border-green-200 text-green-600 bg-green-50': marketInfo.risk_level === 'High',
-                                        'border-amber-200 text-amber-600 bg-amber-50': marketInfo.risk_level === 'Medium',
-                                        'border-red-200 text-red-600 bg-red-50': marketInfo.risk_level === 'Low'
-                                      }">
-                                     {{ marketInfo.risk_level === 'High' ? '高风险·防御' : (marketInfo.risk_level === 'Medium' ? '震荡·轮动' : '低风险·进攻') }}
-                                </span>
-                            </h3>
-                        </div>
+                    </transition-group>
+                </div>
+        
+                <div class="px-3 text-slate-300 group-hover:text-indigo-500 transition-colors hidden md:flex items-center gap-1">
+                    <span class="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300">查看研报</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </div>
+            </div>
+        </div>
+        
+        
+        <el-dialog v-model="showMarketDetail" title="📊 市场研报" width="90%" style="max-width: 420px;" center class="custom-dialog" align-center append-to-body>
+            <div v-if="marketInfo" class="px-1 pb-1">
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center">
+                        <span class="text-[10px] text-slate-400 mb-0.5 font-bold">市场情绪</span>
+                        <span class="text-lg font-black text-slate-700 dark:text-slate-200">{{ marketInfo.sentiment }}</span>
                     </div>
+                    <div class="rounded-xl p-3 border flex flex-col items-center justify-center"
+                         :class="{
+                            'bg-green-50 border-green-100 text-green-600': marketInfo.risk_level === 'High',
+                            'bg-amber-50 border-amber-100 text-amber-600': marketInfo.risk_level === 'Medium',
+                            'bg-rose-50 border-rose-100 text-rose-600': marketInfo.risk_level === 'Low'
+                         }">
+                        <span class="text-[10px] opacity-60 mb-0.5 font-bold">风险等级</span>
+                        <span class="text-lg font-black">
+                            {{ marketInfo.risk_level === 'High' ? '高风险' : (marketInfo.risk_level === 'Medium' ? '震荡' : '低风险') }}
+                        </span>
+                    </div>
+                </div>
         
-                    <div class="text-right hidden md:block">
-                        <p class="text-sm font-bold opacity-60 mb-1">今日策略</p>
-                        <p class="text-lg font-bold"
+                <div class="mb-3">
+                    <div class="p-2.5 rounded-lg border border-dashed border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/50 dark:bg-indigo-900/10 text-center">
+                        <p class="text-xs font-bold leading-relaxed"
                            :class="{
-                              'text-green-600 dark:text-green-400': marketInfo.risk_level === 'High',
-                              'text-amber-600 dark:text-amber-400': marketInfo.risk_level === 'Medium',
-                              'text-red-500 dark:text-red-400': marketInfo.risk_level === 'Low'
+                              'text-green-600': marketInfo.risk_level === 'High',
+                              'text-amber-600': marketInfo.risk_level === 'Medium',
+                              'text-rose-500': marketInfo.risk_level === 'Low'
                            }">
                            “ {{ marketInfo.advice }} ”
                         </p>
                     </div>
                 </div>
         
-                <div class="px-6 py-4 bg-white/40 dark:bg-black/20 flex items-center gap-4 min-h-[60px]">
-                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-500/20 text-indigo-500 flex items-center justify-center animate-pulse">
-                        🔔
+                <div class="mb-3">
+                    <div class="flex items-center justify-between mb-1.5 px-1">
+                        <h4 class="text-xs font-bold text-slate-500 flex items-center gap-1">
+                            <span>🧠</span> AI 复盘
+                        </h4>
+                        <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500 font-medium truncate max-w-[180px]">
+                            热点：{{ marketInfo.hot_event || '无显著热点' }}
+                        </span>
                     </div>
-                    
-                    <div class="flex-1 h-6 overflow-hidden relative">
-                        <transition-group name="news-slide" tag="div" class="relative w-full h-full">
-                            <div v-for="(news, index) in marketInfo.news" 
-                                 :key="index"
-                                 v-show="index === currentNewsIndex"
-                                 class="absolute w-full flex items-center gap-2"
-                            >
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border flex-shrink-0"
-                                      :class="{
-                                        'bg-red-100 text-red-600 border-red-200': news.type === 'bull',
-                                        'bg-green-100 text-green-600 border-green-200': news.type === 'bear',
-                                        'bg-blue-100 text-blue-600 border-blue-200': news.type === 'info'
-                                      }">
-                                    {{ news.type === 'bull' ? '利好' : (news.type === 'bear' ? '利空' : '消息') }}
-                                </span>
-                                <span class="text-sm font-medium truncate opacity-90" :title="news.content">
-                                    {{ news.content }}
-                                </span>
-                            </div>
-                        </transition-group>
+                    <div class="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl text-xs leading-relaxed text-slate-600 dark:text-slate-300 text-justify border border-slate-100 dark:border-slate-800">
+                        {{ marketInfo.analysis }}
                     </div>
                 </div>
+        
+                <div>
+                    <h4 class="text-xs font-bold text-slate-500 mb-1.5 px-1 flex items-center gap-1">
+                        <span>📰</span> 核心消息
+                    </h4>
+                    <div class="space-y-1.5 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar">
+                        <div v-for="(news, idx) in marketInfo.news" :key="idx" 
+                             class="flex items-start gap-2 text-[11px] p-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                            <span class="flex-shrink-0 px-1 py-0.5 rounded font-bold border mt-[1px] text-[10px] scale-95 origin-top-left"
+                                  :class="{
+                                    'bg-red-50 text-red-600 border-red-100': news.type === 'bull',
+                                    'bg-green-50 text-green-600 border-green-100': news.type === 'bear',
+                                    'bg-blue-50 text-blue-600 border-blue-100': news.type === 'info'
+                                  }">
+                                {{ news.type === 'bull' ? '利好' : (news.type === 'bear' ? '利空' : '消息') }}
+                            </span>
+                            <span class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                {{ news.content.replace(/^(利好|利空|消息)[:：]\s*/, '') }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+        
             </div>
-        </div>
+        </el-dialog>
         <div v-if="stocks.length" class="w-full max-w-7xl animate-fade-in-up" style="animation-delay: 0.2s;">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
                 <div 
@@ -713,6 +736,7 @@
 
             const marketInfo = ref(null);
             const currentNewsIndex = ref(0); // [新增] 控制新闻轮播
+            const showMarketDetail = ref(false); // [新增] 控制详情弹窗显示
             
             // [新增] 网站运行天数
             const runtime = ref(0);
@@ -728,12 +752,12 @@
             const displayContent = ref({ icon: '', text: '' });
 
             const activeIsland = computed(() => {
-                if (isMobile.value && (showAdvice.value || showGzh.value || showReward.value)) return true;
+                if (isMobile.value && (showAdvice.value || showGzh.value || showReward.value || showMarketDetail.value)) return true;
                 return toastState.value.show;
             });
 
             watch(
-                () => [isMobile.value,showAdvice.value, showGzh.value, showReward.value, toastState.value.show, toastState.value.text],
+                () => [isMobile.value,showAdvice.value, showGzh.value, showReward.value,showMarketDetail.value, toastState.value.show, toastState.value.text],
                 () => {
                     if (isMobile.value && showGzh.value) {
                         displayContent.value = { icon: '<span class="text-green-400">💬</span>', text: '正在关注 AI 狠话' };
@@ -741,6 +765,8 @@
                         displayContent.value = { icon: '<span class="text-amber-400">🧡</span>', text: '感谢您的支持' };
                     } else if (isMobile.value && showAdvice.value) {
                         displayContent.value = { icon: '<span class="text-yellow-400">💡</span>', text: '查阅交易心法' };
+                    } else if (isMobile.value && showMarketDetail.value) {
+                        displayContent.value = { icon: '<span class="text-indigo-400">📊</span>', text: '正在阅读研报' };
                     } else if (toastState.value.show) {
                         displayContent.value = { icon: toastState.value.icon, text: toastState.value.text };
                     }
@@ -804,10 +830,14 @@
                     const res = await fetch(`data/history.json?t=${Date.now()}`);
                     if(!res.ok) throw new Error("No Data");
                     const allData = await res.json();
-                    stocks.value = allData[selectedDate.value]?.stocks || [];
+                    // [修改] 解析数据结构
+                    const currentData = allData[selectedDate.value];
+                    stocks.value = currentData?.stocks || [];
+                    marketInfo.value = currentData?.market || null; // [新增] 获取市场信息
                     initObserver();
                 } catch (e) {
                     stocks.value = [];
+                    marketInfo.value = null;
                 } finally {
                     loading.value = false;
                 }
@@ -884,9 +914,9 @@
             });
 
             return { 
-                selectedDate, stocks, loading, isDark, marketInfo, currentNewsIndex,
+                selectedDate, stocks, loading, isDark, marketInfo, currentNewsIndex, showMarketDetail,
                 showAdvice, showGzh, showReward, activeIsland, displayContent, isMobile, currentModelName, currentModelIndex,
-                toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, 
+                toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote,
                 triggerIsland, copyStockCode, goToGzhArticle,
                 runtime // 导出 runtime
             };

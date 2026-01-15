@@ -131,6 +131,12 @@ def call_openai_compatible(api_key, base_url, model_name, prompt, source_display
 
 # --- 主程序 ---
 def main():
+    # 计算日期上下文 (让 AI 知道今天是哪天，昨天是哪天)
+    utc_now = datetime.datetime.now(datetime.timezone.utc)
+    beijing_time = utc_now + datetime.timedelta(hours=8)
+    today_str = beijing_time.strftime("%Y年%m月%d日")
+    yesterday_str = (beijing_time - datetime.timedelta(days=1)).strftime("%Y年%m月%d日")
+
     # 1. 生成排除名单
     history_path = 'dist/data/history.json'
     excluded_items = []
@@ -151,10 +157,11 @@ def main():
 
     # 2. 准备 Prompt (Qwen-Max 专用版：包含情绪 + 详细新闻)
     prompt = f"""
+    今天是 {today_str}。
     你是一位专门服务于 A 股散户的资深量化策略师。请完成【市场研判】与【个股精选】。
 
     【任务一：市场大势研判 (最重要的风控环节)】
-    请分析昨日/近期 A 股市场的核心情绪。
+    请回顾 {yesterday_str} 当天发生的。
     1. 给出市场情绪词 (如：恐慌/贪婪/震荡)。
     2. ⚠️ 重点：请列出 3-5 条具体的【利好】或【利空】消息摘要（如：央行降准、美联储加息、某行业重大利好等）。
     3. 给出今日仓位建议。
@@ -209,12 +216,12 @@ def main():
     # 3. === 调整后的开火顺序 ===
     # 这里的顺序严格对应您的要求
     providers = [
-         # 🎁 第一级 (A): 阿里通义千问 - 国产兜底
+         # 💎 第一级: ChatAnywhere (GPT Free) - 强力备用
         {
-            "name": "Alibaba Qwen",
-            "key": os.environ.get("DASHSCOPE_API_KEY"),
-            "url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            "model": "qwen-max"
+            "name": "ChatAnywhere",
+            "key": os.environ.get("CHATANYWHERE_KEY"), 
+            "url": "https://api.chatanywhere.tech/v1",
+            "model": "gpt-5.2" # 免费版支持 gpt-5.2, gpt-5.1, gpt-5, gpt-4o，gpt-4.1 一天 5 次；支持 deepseek-r1, deepseek-v3, deepseek-v3-2-exp 一天 30 次，支持 gpt-4o-mini，gpt-3.5-turbo，gpt-4.1-mini，gpt-4.1-nano, gpt-5-mini，gpt-5-nano 一天 200 次。
         },
          # 🚀 第二级: GitHub Models (GPT-4) - 最强主攻
         {
@@ -223,15 +230,15 @@ def main():
             "url": "https://models.inference.ai.azure.com",
             "model": "gpt-4o" # 务必确认您的 Token 有 GPT-5 权限，否则改回 gpt-4o
         },
-        # 💎 第三级: ChatAnywhere (GPT Free) - 强力备用
+         # 🎁 第三级 (A): 阿里通义千问 - 国产兜底
         {
-            "name": "ChatAnywhere",
-            "key": os.environ.get("CHATANYWHERE_KEY"), 
-            "url": "https://api.chatanywhere.tech/v1",
-            "model": "gpt-3.5-turbo" # 或者是 gpt-4，视您领取的 Key 额度而定
+            "name": "Alibaba Qwen",
+            "key": os.environ.get("DASHSCOPE_API_KEY"),
+            "url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "model": "qwen-max"
         },
-       
-        # 🎁 第三级 (B): DeepSeek - 国产兜底
+        
+        # 🎁 第四级 (B): DeepSeek - 国产兜底
         {
             "name": "DeepSeek",
             "key": os.environ.get("DEEPSEEK_API_KEY"),
@@ -292,6 +299,15 @@ def main():
         valid_stocks = []
         for stock in data.get('stocks', []):
             code = stock.get('code', '')
+            # --- [新增] 强制清洗 tags 格式 (防 Qwen 犯傻) ---
+            raw_tags = stock.get('tags', [])
+            if isinstance(raw_tags, str):
+                # 如果 AI 返回的是 "A, B, C" 这种字符串
+                # 1. 把中文逗号替换成英文逗号
+                # 2. 按逗号切割
+                # 3. 去除首尾空格
+                stock['tags'] = [t.strip() for t in raw_tags.replace('，', ',').split(',')]
+            # ----------------------------------------------
             if code in excluded_codes_only:
                 print(f"⚠️ 剔除重复推荐: {stock['name']}")
                 continue
