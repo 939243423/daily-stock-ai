@@ -380,7 +380,7 @@
             </p>
         </header>
 
-        <div class="flex justify-center mb-4 flex-shrink-0 animate-fade-in-up" style="animation-delay: 0.1s;">
+        <div :class="'flex justify-center flex-shrink-0 animate-fade-in-up' + (marketInfo ? ' mb-4' : ' mb-10')" style="animation-delay: 0.1s;">
             <div class="control-capsule">
                 <div class="flex items-center">
                     <span class="text-base font-bold text-slate-500/80 mr-2 whitespace-nowrap">
