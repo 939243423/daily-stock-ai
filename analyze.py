@@ -74,7 +74,62 @@ def get_market_context():
         context_str = "【大盘数据获取失败，请根据一般市场逻辑模糊分析】"
         
     return context_str
-
+def get_latest_news():
+    """
+    获取东方财富 7x24 小时财经快讯 (无需 Token)
+    针对：突发政策（如融资保证金调整）、行业利好
+    """
+    print("📰 正在抓取最新财经新闻...")
+    news_str = "【最新财经大事件 (实时抓取)】\n"
+    
+    try:
+        # 东方财富 7x24 快讯 API
+        # 102 = 全球财经, 50 = 每页数量
+        url = "https://newsapi.eastmoney.com/kuaixun/v1/getlist_102_ajaxResult_50_1_.html"
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        
+        resp = requests.get(url, headers=headers, timeout=5)
+        
+        if resp.status_code == 200:
+            content = resp.text
+            # API 返回格式通常是 "var xxxx = { ... }"，需要清洗成纯 JSON
+            # 找到第一个 "{" 和最后一个 "}"
+            start_idx = content.find("{")
+            end_idx = content.rfind("}")
+            if start_idx != -1 and end_idx != -1:
+                json_str = content[start_idx : end_idx+1]
+                data = json.loads(json_str)
+                
+                # 提取前 10 条重要新闻
+                count = 0
+                for item in data.get('LivesList', []):
+                    title = item.get('title', '')
+                    digest = item.get('digest', '')
+                    show_time = item.get('showTime', '') # 格式通常是 "13:00:00"
+                    
+                    # 过滤掉广告和无关信息
+                    if "推荐" in title or len(digest) < 10:
+                        continue
+                        
+                    # 拼接新闻
+                    full_text = f"{title} {digest}"
+                    news_str += f"- [{show_time}] {full_text[:60]}...\n" # 只取前60个字，省 Token
+                    
+                    count += 1
+                    if count >= 10: break
+            else:
+                news_str += "（新闻数据解析失败，格式异常）"
+        else:
+            news_str += "（新闻接口请求失败）"
+            
+    except Exception as e:
+        print(f"⚠️ 抓取新闻出错: {e}")
+        news_str += "（无法连接新闻源，请依赖大盘数据分析）"
+        
+    return news_str
 def call_gemini(client, prompt):
     """
     尝试调用 Gemini 系列模型。
@@ -178,6 +233,7 @@ def main():
 
     # === [新增] 获取大盘真实数据 ===
     market_context = get_market_context()
+    news_context = get_latest_news()       # 最新的财经快讯 (软消息)
 
     # 1. 生成排除名单
     history_path = 'dist/data/history.json'
@@ -204,12 +260,13 @@ def main():
     请基于以下【真实市场数据】和【昨日日期：{yesterday_str}】，完成分析。
 
     {market_context} 
+    {news_context}
 
     【任务一：市场大势研判 (最重要的风控环节)】
-    请根据上面的【昨日大盘真实数据】进行判断：
+    1. 结合上述【大盘数据】和【财经快讯】，精准判断昨日市场情绪。
     1. 结合上述大盘涨跌幅数据，分析昨日市场情绪（是恐慌杀跌，还是放量上涨？）。
     2. 如果上证指数跌幅超过 1%，请在风险提示中强调“系统性风险”。
-    3. ⚠️ 重点：请列出 3-5 条具体的【利好】或【利空】消息摘要（如：央行降准、美联储加息、某行业重大利好等）。
+    3. ⚠️ 重点：请根据上述财经快讯，列出 3-5 条具体的【利好】或【利空】消息摘要（如：央行降准、美联储加息、某行业重大利好等）。
     4. 给出今日仓位建议。
 
     【任务二：个股精选】
@@ -267,7 +324,7 @@ def main():
             "name": "ChatAnywhere",
             "key": os.environ.get("CHATANYWHERE_KEY"), 
             "url": "https://api.chatanywhere.tech/v1",
-            "model": "gpt-5.1" # 免费版支持 gpt-5.2, gpt-5.1, gpt-5, gpt-4o，gpt-4.1 一天 5 次；支持 deepseek-r1, deepseek-v3, deepseek-v3-2-exp 一天 30 次，支持 gpt-4o-mini，gpt-3.5-turbo，gpt-4.1-mini，gpt-4.1-nano, gpt-5-mini，gpt-5-nano 一天 200 次。
+            "model": "gpt-5" # 免费版支持 gpt-5.2, gpt-5.1, gpt-5, gpt-4o，gpt-4.1 一天 5 次；支持 deepseek-r1, deepseek-v3, deepseek-v3-2-exp 一天 30 次，支持 gpt-4o-mini，gpt-3.5-turbo，gpt-4.1-mini，gpt-4.1-nano, gpt-5-mini，gpt-5-nano 一天 200 次。
         },
          # 🚀 第二级: GitHub Models (GPT-4) - 最强主攻
         {
