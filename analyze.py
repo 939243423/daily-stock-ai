@@ -36,6 +36,45 @@ def get_real_price(code):
     
     return None
 
+def get_market_context():
+    """
+    获取昨日大盘核心指数数据 (上证、深证)
+    用于喂给 AI，防止它瞎编大盘走势
+    """
+    context_str = ""
+    try:
+        # 定义指数代码: 上证指数, 深证成指
+        indices = {
+            "上证指数": "000001.SS",
+            "深证成指": "399001.SZ"
+        }
+        
+        context_str += "【昨日大盘真实数据】\n"
+        
+        for name, code in indices.items():
+            ticker = yf.Ticker(code)
+            # 取最近 5 天数据，确保能拿到昨天和前天的（用于计算涨跌）
+            hist = ticker.history(period="5d")
+            
+            if len(hist) >= 2:
+                today_close = hist['Close'].iloc[-1]
+                prev_close = hist['Close'].iloc[-2]
+                change = (today_close - prev_close) / prev_close * 100
+                volume = hist['Volume'].iloc[-1] / 100000000 # 换算成亿
+                
+                symbol = "+" if change > 0 else ""
+                context_str += f"- {name}: 收盘 {today_close:.2f} 点, 涨跌幅 {symbol}{change:.2f}%, 成交量 {volume:.1f} 亿手\n"
+        
+        context_str += "(请基于以上真实数据进行大盘情绪研判，不要编造数据)\n"
+        print("✅ 成功获取大盘行情数据")
+        
+    except Exception as e:
+        print(f"⚠️ 获取大盘数据失败: {e}")
+        # 失败了就留空，不影响后面运行
+        context_str = "【大盘数据获取失败，请根据一般市场逻辑模糊分析】"
+        
+    return context_str
+
 def call_gemini(client, prompt):
     """
     尝试调用 Gemini 系列模型。
@@ -137,6 +176,9 @@ def main():
     today_str = beijing_time.strftime("%Y年%m月%d日")
     yesterday_str = (beijing_time - datetime.timedelta(days=1)).strftime("%Y年%m月%d日")
 
+    # === [新增] 获取大盘真实数据 ===
+    market_context = get_market_context()
+
     # 1. 生成排除名单
     history_path = 'dist/data/history.json'
     excluded_items = []
@@ -158,13 +200,17 @@ def main():
     # 2. 准备 Prompt (Qwen-Max 专用版：包含情绪 + 详细新闻)
     prompt = f"""
     今天是 {today_str}。
-    你是一位专门服务于 A 股散户的资深量化策略师。请完成【市场研判】与【个股精选】。
+    你是一位专门服务于 A 股散户的资深量化策略师。
+    请基于以下【真实市场数据】和【昨日日期：{yesterday_str}】，完成分析。
+
+    {market_context} 
 
     【任务一：市场大势研判 (最重要的风控环节)】
-    请回顾 {yesterday_str} 当天发生的。
-    1. 给出市场情绪词 (如：恐慌/贪婪/震荡)。
-    2. ⚠️ 重点：请列出 3-5 条具体的【利好】或【利空】消息摘要（如：央行降准、美联储加息、某行业重大利好等）。
-    3. 给出今日仓位建议。
+    请根据上面的【昨日大盘真实数据】进行判断：
+    1. 结合上述大盘涨跌幅数据，分析昨日市场情绪（是恐慌杀跌，还是放量上涨？）。
+    2. 如果上证指数跌幅超过 1%，请在风险提示中强调“系统性风险”。
+    3. ⚠️ 重点：请列出 3-5 条具体的【利好】或【利空】消息摘要（如：央行降准、美联储加息、某行业重大利好等）。
+    4. 给出今日仓位建议。
 
     【任务二：个股精选】
     挑选 3 只满足以下条件的股票：
@@ -221,7 +267,7 @@ def main():
             "name": "ChatAnywhere",
             "key": os.environ.get("CHATANYWHERE_KEY"), 
             "url": "https://api.chatanywhere.tech/v1",
-            "model": "gpt-5.2" # 免费版支持 gpt-5.2, gpt-5.1, gpt-5, gpt-4o，gpt-4.1 一天 5 次；支持 deepseek-r1, deepseek-v3, deepseek-v3-2-exp 一天 30 次，支持 gpt-4o-mini，gpt-3.5-turbo，gpt-4.1-mini，gpt-4.1-nano, gpt-5-mini，gpt-5-nano 一天 200 次。
+            "model": "gpt-5.1" # 免费版支持 gpt-5.2, gpt-5.1, gpt-5, gpt-4o，gpt-4.1 一天 5 次；支持 deepseek-r1, deepseek-v3, deepseek-v3-2-exp 一天 30 次，支持 gpt-4o-mini，gpt-3.5-turbo，gpt-4.1-mini，gpt-4.1-nano, gpt-5-mini，gpt-5-nano 一天 200 次。
         },
          # 🚀 第二级: GitHub Models (GPT-4) - 最强主攻
         {
