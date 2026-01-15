@@ -76,17 +76,28 @@ def get_market_context():
     return context_str
 def get_latest_news():
     """
-    获取东方财富 7x24 小时财经快讯 (无需 Token)
-    针对：突发政策（如融资保证金调整）、行业利好
+    获取东方财富 7x24 小时财经快讯 (A 股纯净版)
+    仅保留与 A 股、宏观政策、核心资产相关的消息，剔除噪音。
     """
-    print("📰 正在抓取最新财经新闻...")
-    news_str = "【最新财经大事件 (实时抓取)】\n"
+    print("📰 正在抓取 A 股核心快讯...")
+    news_str = "【最新 A 股核心情报】\n"
     
+    # 关键词过滤器：只有包含这些词的新闻才会被 AI 看到
+    # 1. 核心指数 & 交易所
+    kws_core = ["A股", "沪指", "深成指", "创业板", "科创板", "北交所", "上证", "深证", "恒生", "港股", "金龙"]
+    # 2. 政策 & 宏观
+    kws_policy = ["央行", "证监会", "交易所", "发改委", "国务院", "降准", "降息", "LPR", "MLF", "逆回购", "印花税", "美联储", "汇率", "人民币"]
+    # 3. 市场 & 资金
+    kws_market = ["融资", "北向", "外资", "主力", "资金流向", "成交量", "放量", "缩量", "涨停", "跌停", "板块", "概念", "龙虎榜", "ETF", "券商", "基金"]
+    # 4. 重点行业 (可按需补充)
+    kws_industry = ["半导体", "新能源", "白酒", "医药", "房地产", "银行", "中字头", "人工智能", "算力", "低空经济"]
+    
+    # 合并关键词库
+    a_share_keywords = set(kws_core + kws_policy + kws_market + kws_industry)
+
     try:
-        # 东方财富 7x24 快讯 API
-        # 102 = 全球财经, 50 = 每页数量
+        # 使用 102 频道 (全球直播) 确保不漏掉宏观大事，然后手动过滤
         url = "https://newsapi.eastmoney.com/kuaixun/v1/getlist_102_ajaxResult_50_1_.html"
-        
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         }
@@ -95,39 +106,43 @@ def get_latest_news():
         
         if resp.status_code == 200:
             content = resp.text
-            # API 返回格式通常是 "var xxxx = { ... }"，需要清洗成纯 JSON
-            # 找到第一个 "{" 和最后一个 "}"
             start_idx = content.find("{")
             end_idx = content.rfind("}")
+            
             if start_idx != -1 and end_idx != -1:
                 json_str = content[start_idx : end_idx+1]
                 data = json.loads(json_str)
                 
-                # 提取前 10 条重要新闻
                 count = 0
                 for item in data.get('LivesList', []):
                     title = item.get('title', '')
                     digest = item.get('digest', '')
-                    show_time = item.get('showTime', '') # 格式通常是 "13:00:00"
+                    show_time = item.get('showTime', '') 
                     
-                    # 过滤掉广告和无关信息
-                    if "推荐" in title or len(digest) < 10:
-                        continue
-                        
-                    # 拼接新闻
                     full_text = f"{title} {digest}"
-                    news_str += f"- [{show_time}] {full_text[:60]}...\n" # 只取前60个字，省 Token
+                    
+                    # --- [过滤逻辑] ---
+                    # 1. 排除垃圾广告
+                    if "推荐" in title or len(digest) < 5: continue
+                    
+                    # 2. 必须包含 A 股相关关键词 (核心修改)
+                    # 只要命中任何一个关键词，就保留
+                    if not any(k in full_text for k in a_share_keywords):
+                        continue
+                    # ----------------
+                    
+                    news_str += f"- [{show_time}] {full_text[:60]}...\n"
                     
                     count += 1
-                    if count >= 10: break
+                    if count >= 8: break # 只要前 8 条最相关的
             else:
-                news_str += "（新闻数据解析失败，格式异常）"
+                news_str += "（数据解析异常）"
         else:
-            news_str += "（新闻接口请求失败）"
+            news_str += "（接口请求失败）"
             
     except Exception as e:
         print(f"⚠️ 抓取新闻出错: {e}")
-        news_str += "（无法连接新闻源，请依赖大盘数据分析）"
+        news_str += "（暂无最新消息）"
         
     return news_str
 def call_gemini(client, prompt):
