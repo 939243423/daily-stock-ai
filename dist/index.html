@@ -980,13 +980,13 @@
                         currentNewsIndex.value = (currentNewsIndex.value + 1) % marketInfo.value.news.length;
                     }
                 }, 3500);
-                setTimeout(() => {
-                    try {
-                        (window.adsbygoogle = window.adsbygoogle || []).push({});
-                    } catch (e) {
-                        console.log('AdSense load error:', e);
-                    }
-                }, 1000); // 延迟 1 秒加载广告
+                // setTimeout(() => {
+                //     try {
+                //         (window.adsbygoogle = window.adsbygoogle || []).push({});
+                //     } catch (e) {
+                //         console.log('AdSense load error:', e);
+                //     }
+                // }, 1000); // 延迟 1 秒加载广告
                 fetchData(true);
                 calcRuntime(); // 执行时间计算
                 const style = document.createElement('style');
