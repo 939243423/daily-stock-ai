@@ -694,10 +694,7 @@
                  data-ad-slot="6935698498"
                  data-ad-format="auto"
                  data-full-width-responsive="true"></ins>
-            <script>
-                 (adsbygoogle = window.adsbygoogle || []).push({});
-            </script>
-        </div>
+            </div>
         <footer class="text-center text-[10px] tracking-[0.1em] opacity-40 font-medium mt-12 pb-4">
             <p class="mb-2 text-[10px] md:text-xs">
                 &copy; 2026 AI 股市雷达 <br class="md:hidden" />
@@ -919,6 +916,13 @@
                         currentNewsIndex.value = (currentNewsIndex.value + 1) % marketInfo.value.news.length;
                     }
                 }, 3500);
+                setTimeout(() => {
+                    try {
+                        (window.adsbygoogle = window.adsbygoogle || []).push({});
+                    } catch (e) {
+                        console.log('AdSense load error:', e);
+                    }
+                }, 1000); // 延迟 1 秒加载广告
                 fetchData(true);
                 calcRuntime(); // 执行时间计算
                 const style = document.createElement('style');
