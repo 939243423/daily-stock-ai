@@ -66,7 +66,7 @@
 ### 第四步：启用自动运行
 1.  点击仓库上方的 `Actions` 标签。
 2.  如果看到警告，点击 "I understand my workflows, go ahead and enable them"。
-3.  程序默认每天 **北京时间 17:00** (UTC 9:00) 自动运行。
+3.  程序默认每天 **北京时间 13:30** (UTC 5:30) 自动运行（一般自动执行会有20分钟左右延迟）。
 4.  您也可以手动点击 `Daily Stock Analysis` -> `Run workflow` 立即触发一次分析。
 
 ### 第五步：查看结果
