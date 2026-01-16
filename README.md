@@ -13,11 +13,16 @@
 
 它不仅仅是一个简单的股票推荐系统，而是一个集成了**实时新闻抓取**、**大盘情绪研判**、**主力资金分析**于一体的智能投研驾驶舱。系统每天自动运行，生成一份可视化的市场研报。
 
+## ⌛️ 运行介绍
+
+**早盘诱**多陷阱多。因此该项目将在下午 13:30午后趋势明朗后再行建议建仓或补单，这样不仅安全还能捕捉尾盘主力偷袭机会。
+
+
 ### 🔥 核心特性
 
 * **🧠 四级火箭 (MoE 架构)**：
+    * **主攻**: 🚀 **OpenAI GPT-5** —— 逻辑推理天花板，负责深度复盘。
     * **主力**: 🇨🇳 **阿里通义千问 (Qwen-Max)** —— 懂 A 股政策，擅长捕捉“字里行间”的利好。
-    * **主攻**: 🚀 **OpenAI GPT-4o** —— 逻辑推理天花板，负责深度复盘。
     * **特攻**: 🐋 **DeepSeek-V3** —— 挖掘低估值与高成长性的潜力标的。
     * **兜底**: ✨ **Google Gemini** —— 全球视角风控与备用通道。
 * **📰 消息驱动交易**：
@@ -25,7 +30,7 @@
     * AI 自动阅读新闻，并根据**“消息面 -> 板块 -> 龙头”**的逻辑链条进行选股。
 * **📊 实时数据校准**：
     * 利用 `yfinance` 实时校准股价与涨跌幅，拒绝 AI“瞎编”行情。
-    * 独创**“AI 信号塔”**，可视化展示当日仓位建议（1-5成仓）。
+    * 独创**“市场研报”**，智能提示当日仓位建议（1-5成仓）。
 * **📱 极致 UI/UX**：
     * **灵动岛交互**：点击研报即可触发顶部的灵动岛动画。
     * **融合式仪表盘**：像彭博终端一样专业的顶部状态栏。
@@ -47,7 +52,7 @@
 2.  **GitHub Models**: [申请 Azure Token](https://github.com/marketplace/models) (免费使用 GPT-4o)
 3.  **阿里云百炼**: [申请 Qwen-Max Key](https://bailian.console.aliyun.com/) (国产最强，新人有免费额度)
 4.  **DeepSeek**: [申请 API Key](https://platform.deepseek.com/) (性价比之王)
-5.  **Google AI Studio**: [申请 Gemini Key](https://aistudio.google.com/) (免费)
+5.  **Google AI Studio**: [申请 Gemini Key](https://aistudio.google.com/) (免费，但极易429，基本不可用)
 
 ### 第三步：配置 GitHub Secrets
 进入您 Fork 后的仓库：
@@ -58,8 +63,8 @@
 | 变量名 (Name) | 说明 | 必填性 |
 | :--- | :--- | :--- |
 | `CHATANYWHERE_KEY` | ChatAnywhere 的 API Key (转发 GPT) | ⭐ 推荐 |
-| `GH_TOKEN` | GitHub Models Token (微软 Azure) | 选填 |
-| `DASHSCOPE_API_KEY` | 阿里云 Qwen (通义千问) Key | ⭐ 推荐 (懂A股) |
+| `GH_TOKEN` | GitHub Models Token (微软 Azure) | ⭐ 推荐  |
+| `DASHSCOPE_API_KEY` | 阿里云 Qwen (通义千问) Key | ⭐ 一般推荐 (懂A股但是可能存在格式问题) |
 | `DEEPSEEK_API_KEY` | DeepSeek API Key | 选填 |
 | `GEMINI_API_KEY` | Google Gemini API Key | 选填 |
 
