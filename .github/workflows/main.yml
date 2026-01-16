@@ -3,7 +3,7 @@ name: Daily Stock AI Analysis
 on:
   schedule:
     # 北京时间每天早上 08:08 运行 (UTC 00:08)
-    - cron: '42 22 * * *'
+    - cron: '30 05 * * *'
   workflow_dispatch: # 允许你手动点击 "Run workflow" 测试
 
 jobs:
