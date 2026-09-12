@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>AI 股市雷达</title>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2092837916208091"
+     crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="assets/css/index.css" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <script src="assets/js/tailwindcss.js"></script>
+    
+    <style>
+        /* --- 基础设置 --- */
+        [v-cloak] { display: none !important; }
+        body.el-popup-parent--hidden { padding-right: 0 !important; overflow: hidden !important; }
+
+        /* 关键帧定义 */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+        @keyframes radarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        /* 移动端流体动画 (3D加速) */
+        @keyframes moveBlob {
+            0% { transform: translate3d(0, 0, 0) scale(1); }
+            33% { transform: translate3d(30vw, 10vh, 0) scale(1.1); }
+            66% { transform: translate3d(-20vw, 20vh, 0) scale(0.9); }
+            100% { transform: translate3d(10vw, -10vh, 0) scale(1); }
+        }
+
+        /* --- 变量 --- */
+        :root {
+            --bg-body: #f0f4f8; --text-primary: #0f172a; --text-secondary: #64748b;
+            --card-bg: rgba(255, 255, 255, 0.45); 
+            --card-bg-mobile: rgba(255, 255, 255, 0.92);
+            --card-border: rgba(255, 255, 255, 0.6);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+            --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+            --btn-gradient: linear-gradient(to right, #4f46e5, #7c3aed); 
+            --capsule-bg: rgba(255, 255, 255, 0.5); --radar-line: rgba(99, 102, 241, 0.2);
+        }
+        html.dark {
+            --bg-body: #020617; --text-primary: #f8fafc; --text-secondary: #94a3b8;
+            --card-bg: rgba(15, 23, 42, 0.4); 
+            --card-bg-mobile: rgba(15, 23, 42, 0.95);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            --accent-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+            --btn-gradient: linear-gradient(to right, #6366f1, #a855f7);
+            --capsule-bg: rgba(15, 23, 42, 0.5); --radar-line: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            color: var(--text-primary); font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+            transition: color 0.5s; min-height: 100vh; overflow-x: hidden; overflow-y: auto;
+            background-color: var(--bg-body);
+        }
+        .title-gradient { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
+
+        /* --- 液态背景：仅移动端显示 --- */
+        /* .liquid-bg-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; overflow: hidden;
+            background: var(--bg-body); transition: background 0.5s;
+            contain: strict; pointer-events: none;
+        } */
+        /* @media (min-width: 641px) { */
+            .liquid-bg-layer { display: none !important; }
+            body {
+                background-image: 
+                    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15), transparent 40%), 
+                    radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.15), transparent 40%);
+                background-attachment: fixed; background-size: 100% 100%;
+            }
+            html.dark body {
+                background-image: 
+                    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.08), transparent 45%), 
+                    radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.08), transparent 45%);
+            }
+        /* } */
+        /* .model-switch-enter-active,
+        .model-switch-leave-active {
+            transition: opacity 0.5s ease-in-out; 
+            display: inline-block;
+        }
+
+        .model-switch-enter-from,
+        .model-switch-leave-to {
+            opacity: 0;
+        } */
+
+        /* --- 雷达光感扫描动画 (无固定宽度版) --- */
+        .model-switch-enter-active,
+        .model-switch-leave-active {
+            /* 0.8秒的缓动，更有质感 */
+            transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            
+            /* 核心：线性渐变遮罩，两头虚中间实 */
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%);
+            
+            /* 遮罩宽度设为 200% 以便移动扫描 */
+            -webkit-mask-size: 200% 100%;
+            mask-size: 200% 100%;
+            
+            -webkit-mask-repeat: no-repeat;
+            mask-repeat: no-repeat;
+            
+            /* 确保文字不换行，防止动画过程中抖动 */
+            white-space: nowrap; 
+        }
+
+        /* --- 市场卡片样式 --- */
+        /* 自定义滚动条 */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.5); }
+
+        /* 轮播动画微调 */
+        .news-slide-enter-active, .news-slide-leave-active { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .news-slide-enter-from { opacity: 0; transform: translateY(100%); }
+        .news-slide-leave-to { opacity: 0; transform: translateY(-100%); }
+        .news-slide-leave-active { position: absolute; }
+
+        /* === 离开状态 (旧文字) === */
+        /* 从“可见”状态 -> 向右移动并消失 */
+        .model-switch-leave-from {
+            -webkit-mask-position: 50% 0;
+            mask-position: 50% 0;
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .model-switch-leave-to {
+            -webkit-mask-position: 150% 0; /* 遮罩向右移走 */
+            mask-position: 150% 0;
+            opacity: 0;
+            transform: translateX(20px); /* 文字稍微右移，增强动感 */
+        }
+
+        /* 从“隐形”状态(在左边) -> 向右移动并显现 */
+        .model-switch-enter-from {
+            -webkit-mask-position: -50% 0; /* 遮罩在左边等待 */
+            mask-position: -50% 0;
+            opacity: 0;
+            transform: translateX(-20px); /* 文字从左边滑入 */
+        }
+        .model-switch-enter-to {
+            -webkit-mask-position: 50% 0; /* 遮罩归位 */
+            mask-position: 50% 0;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+
+        .liquid-blob {
+            position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.3;
+            animation: moveBlob 40s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform; transform: translate3d(0,0,0);
+        }
+        html.dark .liquid-blob { opacity: 0.2; filter: blur(80px); }
+
+        .blob-1 { top: -10%; left: -10%; width: 70vw; height: 70vw; background: rgba(99, 102, 241, 0.4); animation-duration: 45s; }
+        .blob-2 { bottom: -10%; right: -10%; width: 80vw; height: 80vw; background: rgba(6, 182, 212, 0.3); animation-duration: 55s; animation-delay: -5s; }
+
+        /* --- Loading --- */
+        #global-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px);
+            z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; transition: opacity 0.5s ease;
+        }
+        html.dark #global-loader { background: rgba(2, 6, 23, 0.8); }
+        .loader-spinner { width: 44px; height: 44px; border: 4px solid rgba(99, 102, 241, 0.15); border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .loader-text { margin-top: 16px; color: #64748b; font-size: 14px; font-weight: 500; letter-spacing: 0.15em; font-family: -apple-system, sans-serif; animation: pulse 1.5s ease-in-out infinite; }
+
+        /* --- 灵动胶囊导航 --- */
+        .nav-capsule {
+            position: fixed; top: 24px; right: 24px; z-index: 50;
+            display: flex; align-items: center;
+            background: var(--card-bg); 
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border); border-radius: 99px; padding: 4px;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .nav-capsule:hover { box-shadow: 0 12px 40px rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.4); transform: translateY(-1px); }
+        .nav-item {
+            width: 40px; height: 40px; display: flex; justify-content: center; align-items: center;
+            border-radius: 50%; cursor: pointer; color: var(--text-secondary);
+            transition: all 0.2s; font-size: 18px; border: none; background: transparent; outline: none; -webkit-tap-highlight-color: transparent;
+        }
+        .nav-item:hover { background: rgba(99, 102, 241, 0.15); color: #6366f1; transform: scale(1.05); }
+        .nav-item { -webkit-tap-highlight-color: transparent; }
+        .nav-divider { width: 1px; height: 18px; background-color: var(--text-secondary); opacity: 0.2; margin: 0 4px; }
+
+        @media (max-width: 640px) {
+            .nav-capsule { top: 16px; right: 16px; padding: 2px; transform: scale(0.9); transform-origin: top right; }
+            .nav-capsule.shifted { transform: translateY(50px) scale(0.9) !important; }
+            .nav-item { width: 36px; height: 36px; font-size: 16px; }
+            header.main-header { margin-top: 60px !important; }
+        }
+
+        /* --- 灵动岛 --- */
+        .dynamic-island {
+            position: fixed; top: 12px; left: 50%; transform: translateX(-50%) scale(0.8);
+            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px);
+            color: white; padding: 0; border-radius: 99px; z-index: 9999;
+            width: auto; max-width: 90vw; height: 36px; opacity: 0; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .dynamic-island.active { transform: translateX(-50%) scale(1); opacity: 1; height: 42px; padding: 0 24px; }
+        .island-content { font-size: 13px; font-weight: 600; letter-spacing: 0.05em; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        @media (min-width: 641px) { .dynamic-island { display: none !important; } }
+        html.dark .dynamic-island { background: rgba(255, 255, 255, 0.95); color: #020617; }
+
+        /* 谷歌广告手风琴折叠动画 */
+        .accordion-enter-active,
+        .accordion-leave-active {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 300px; /* 设定一个足够容纳广告的高度 */
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .accordion-enter-from,
+        .accordion-leave-to {
+            max-height: 0;
+            opacity: 0;
+            transform: scale(0.95);
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            border: none !important;
+        }
+
+        /* --- 股票卡片 --- */
+        .stock-card {
+            /* PC端: 毛玻璃 */
+            background: var(--card-bg); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border); box-shadow: var(--glass-shadow);
+            border-radius: 24px; padding: 28px; display: flex; flex-direction: column;
+            min-height: 540px; height: auto; position: relative; cursor: default;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            content-visibility: auto; contain-intrinsic-size: 1px 540px;
+        }
+        @media (max-width: 640px) {
+            .stock-card { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--card-bg-mobile) !important; }
+        }
+
+        .stock-card:hover, .stock-card.active-card {
+            transform: translateY(-8px) scale(1.02); border-color: rgba(99, 102, 241, 0.5); 
+            box-shadow: 0 20px 60px -10px rgba(99, 102, 241, 0.25);
+        }
+        @media (min-width: 641px) {
+            .stock-card:hover { background: rgba(255, 255, 255, 0.65); }
+            html.dark .stock-card:hover { background: rgba(30, 41, 59, 0.6); }
+        }
+
+        .stock-title-link { cursor: pointer; position: relative; display: inline-block; transition: color 0.3s; }
+        .stock-title-link:hover { color: #6366f1; }
+        .stock-title-link::after { content: ''; position: absolute; width: 0; height: 2px; bottom: 0; left: 0; background-color: #6366f1; transition: width 0.3s; }
+        .stock-title-link:hover::after { width: 100%; }
+
+        .external-link-icon { position: absolute; top: 28px; right: 28px; opacity: 0; color: #6366f1; transform: translate(-10px, 10px) scale(0.5); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .stock-card:hover .external-link-icon, .stock-card.active-card .external-link-icon { opacity: 1; transform: translate(0, 0) scale(1.1); }
+
+        .reason-box { flex: 1; margin: 20px 0; }
+        .reason-text { font-size: 15px; line-height: 1.75; color: var(--text-secondary); font-style: italic; text-align: justify; }
+        .card-footer { margin-top: auto; padding-top: 20px; border-top: 1px dashed var(--card-border); }
+        .tag-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        
+        /* 弹窗 */
+        .custom-dialog {
+            border-radius: 24px !important; 
+            background: rgba(255, 255, 255, 0.9) !important;
+            backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important;
+            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.5) !important;
+            border: none !important;
+        }
+        html.dark .custom-dialog { background: rgba(30, 41, 59, 0.9) !important; box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important; }
+        .el-dialog__header { margin-right: 0 !important; text-align: center;padding-right: 0 !important; }
+        .el-dialog__title { font-weight: 900 !important; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .control-capsule { background: var(--capsule-bg); backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 99px; padding: 6px 6px 6px 15px; display: inline-flex; align-items: center; gap: 12px; box-shadow: var(--glass-shadow); transition: transform 0.3s; }
+        .control-capsule:hover { transform: translateY(-1px); border-color: #6366f1; }
+        .gradient-btn { background: var(--btn-gradient) !important; border: none !important; color: white !important; font-weight: 700; font-size: 13px !important; padding: 0 24px !important; height: 36px !important; border-radius: 99px !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); transition: all 0.3s !important; }
+        .gradient-btn:hover { box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); transform: scale(1.02); }
+
+        /* [核心修改] 按钮固定宽度，防止文字变图标时撑开布局 */
+        .gradient-btn { 
+            background: var(--btn-gradient) !important; border: none !important; color: white !important; 
+            font-weight: 700; font-size: 13px !important; padding: 0 24px !important; height: 36px !important; 
+            border-radius: 99px !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25); 
+            transition: all 0.3s !important; 
+            width: 100px !important; /* 固定宽度 */
+        }
+        /* 日期选择器 */
+        .custom-picker .el-input__wrapper { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0 !important; }
+        .custom-picker .el-input__inner { color: var(--text-primary) !important; font-size: 15px !important; font-weight: 700 !important; font-family: "PingFang SC", monospace; text-align: center !important; height: 32px !important; line-height: 32px !important; letter-spacing: 0.02em; }
+        .custom-picker .el-input__prefix, .custom-picker .el-input__suffix { display: none; }
+        
+        .glass-popper .el-date-table td.today .el-date-table-cell__text { 
+            color: #6366f1 !important; 
+        }
+        .glass-popper {
+            --el-bg-color-overlay: rgba(255, 255, 255, 0.95); --el-border-color-light: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(20px); background-color: var(--el-bg-color-overlay) !important; border: 1px solid var(--el-border-color-light) !important;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1) !important; border-radius: 16px !important; margin-left: 0 !important;
+        }
+        html.dark .glass-popper {
+            --el-bg-color-overlay: rgba(30, 41, 59, 0.95); --el-border-color-light: rgba(255, 255, 255, 0.1);
+            --el-text-color-regular: #f8fafc; --el-text-color-primary: #f8fafc;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4) !important;
+        }
+        .glass-popper .el-date-table td.current .el-date-table-cell__text { background: var(--accent-gradient) !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); font-weight: 800; border: none; color: #fff !important; }
+        .glass-popper .el-date-table td.today .el-date-table-cell__text { font-weight: 700; }
+        .glass-popper .el-date-table td:hover .el-date-table-cell__text { color: #6366f1 !important; }
+        html.dark .glass-popper .el-date-table td:hover .el-date-table-cell__text { color: #818cf8 !important; }
+        .glass-popper .el-date-picker__header-label:hover { color: #6366f1 !important; }
+        
+         /* Tooltip 夜间修复 */
+         html.dark .el-popper.is-light { color: #020617 !important; }
+        html.dark .el-popper.is-light .el-popper__arrow::before {  }
+        .el-popper.is-pure { padding: 5px 11px; }
+
+        .font-num { font-family: 'SF Mono', 'Roboto Mono', Menlo, monospace; }
+        .score-gradient-text { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 900; }
+        
+        .empty-state-card { background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 32px; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; box-shadow: 0 20px 50px -10px rgba(0,0,0,0.05); }
+        .radar-container { position: relative; width: 80px; height: 80px; border: 1px solid var(--radar-line); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
+        .radar-container::before { content: ''; position: absolute; width: 60%; height: 60%; border: 1px solid var(--radar-line); border-radius: 50%; }
+        .radar-scan { position: absolute; width: 100%; height: 100%; background: conic-gradient(transparent 270deg, rgba(99, 102, 241, 0.4)); border-radius: 50%; animation: radarSpin 2s linear infinite; }
+        .radar-dot { width: 8px; height: 8px; background: #6366f1; border-radius: 50%; box-shadow: 0 0 10px #6366f1; }
+    </style>
+</head>
+<body>
+
+<div class="liquid-bg-layer">
+    <div class="liquid-blob blob-1"></div>
+    <div class="liquid-blob blob-2"></div>
+</div>
+
+<div id="global-loader">
+    <div class="loader-spinner"></div>
+    <p class="loader-text">AI 引擎初始化中...</p>
+</div>
+
+<div id="app" v-cloak class="min-h-screen w-full flex flex-col items-center py-10 px-6 relative z-10">
+    
+    <el-config-provider :locale="locale">
+        
+        <div class="dynamic-island" :class="{ 'active': activeIsland }">
+            <div class="island-content">
+                <span class="flex items-center gap-2">
+                    <span v-html="displayContent.icon"></span> {{ displayContent.text }}
+                </span>
+            </div>
+        </div>
+
+        <div class="nav-capsule" :class="{ 'shifted': isMobile && activeIsland }">
+            <el-tooltip :disabled="isMobile" content="交易心法" placement="bottom" :show-after="200" effect="light">
+                <button @click="triggerIsland('advice')" class="nav-item">
+                    <span class="text-xl">💡</span>
+                </button>
+            </el-tooltip>
+            <el-tooltip :disabled="isMobile" content="关注公众号" placement="bottom" :show-after="200" effect="light">
+                <button @click="triggerIsland('gzh')" class="nav-item">
+                    <span class="text-xl">💬</span>
+                </button>
+            </el-tooltip>
+            
+            <el-tooltip :disabled="isMobile" content="支持作者" placement="bottom" :show-after="200" effect="light">
+                <button @click="triggerIsland('reward')" class="nav-item">
+                    <span class="text-xl">🧡</span>
+                </button>
+            </el-tooltip>
+            
+            <div class="nav-divider"></div>
+            
+            <el-tooltip :disabled="isMobile" content="切换主题" placement="bottom" :show-after="200" effect="light">
+                <button @click="toggleTheme" class="nav-item">
+                    <span v-if="isDark" class="text-lg">🌙</span>
+                    <span v-else class="text-lg">☀️</span>
+                </button>
+            </el-tooltip>
+        </div>
+
+        <header class="main-header text-center flex-shrink-0 animate-fade-in-up mb-8">
+            <h1 class="text-4xl md:text-6xl mb-3 main-title title-gradient">AI 股市雷达</h1>
+            <p class="h-6 mt-1 text-[10px] md:text-xs font-bold tracking-[0.15em] uppercase opacity-60 flex justify-center items-center gap-2 overflow-hidden" style="color: var(--text-secondary)">
+                <span>Quant Analysis •</span>
+                
+                <transition name="model-switch" mode="out-in">
+                    <span 
+                        :key="currentModelIndex" 
+                        class="inline-block text-indigo-500 font-black text-left whitespace-nowrap"
+                    >
+                        {{ currentModelName }}
+                    </span>
+                </transition>
+            </p>
+        </header>
+
+        <!-- 赞助商 -->
+        <!-- <div class="w-full max-w-4xl mx-auto mb-6 flex flex-col items-center animate-fade-in-up" style="animation-delay: 0.1s;">
+            
+            <button 
+                @click="toggleBannerAd"
+                class="text-[10px] font-bold tracking-widest px-3 py-1 rounded-full transition-all duration-300 border mb-2 flex items-center gap-1"
+                :class="showBannerAd 
+                    ? 'bg-indigo-50 text-indigo-500 border-indigo-200 dark:bg-indigo-900/30 dark:border-indigo-800' 
+                    : 'bg-white/40 text-slate-400 border-transparent hover:bg-white/80 dark:bg-slate-800/40 dark:hover:bg-slate-800/80'"
+            >
+                <span>{{ showBannerAd ? '收起赞助商' : '📢 查看赞助商' }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" 
+                     class="w-3 h-3 transition-transform duration-300"
+                     :class="{ 'rotate-180': showBannerAd }">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+            </button>
+
+            <transition name="accordion">
+                <div v-if="showBannerAd" class="w-full overflow-hidden bg-white/40 dark:bg-slate-800/40 backdrop-blur-md rounded-2xl border border-white/20 shadow-sm p-4 text-center">
+                    
+                    <ins class="adsbygoogle"
+                         style="display:block"
+                         data-ad-client="ca-pub-2092837916208091"
+                         data-ad-slot="6935698498"
+                         data-ad-format="auto"
+                         data-full-width-responsive="true"></ins>
+                    
+                </div>
+            </transition>
+        </div> -->
+
+        <div :class="'flex justify-center flex-shrink-0 animate-fade-in-up' + (marketInfo ? ' mb-4' : ' mb-10')" style="animation-delay: 0.1s;">
+            <div class="control-capsule">
+                <div class="flex items-center">
+                    <span class="text-base font-bold text-slate-500/80 mr-2 whitespace-nowrap">
+                        观测日期
+                    </span>
+                    <el-date-picker
+                        v-model="selectedDate"
+                        type="date"
+                        value-format="YYYY-MM-DD"
+                        format="YYYY年MM月DD日"
+                        :clearable="false"
+                        :editable="false"
+                        class="custom-picker"
+                        style="width: 130px;" 
+                        @change="fetchData(false)"
+                        popper-class="glass-popper"
+                        placement="bottom"
+                        :popper-options="{ modifiers: [{ name: 'offset', options: { offset: [15, 20] } }] }"
+                    ></el-date-picker>
+                </div>
+                <div class="w-px h-4 bg-gray-400/30 hidden md:block"></div>
+                <el-button class="gradient-btn" :loading="loading" @click="fetchData(false)" round>
+                    同步策略
+                </el-button>
+            </div>
+        </div>
+        <div v-if="marketInfo" class="w-full max-w-7xl animate-fade-in-up flex-shrink-0 mb-6" style="animation-delay: 0.15s;">
+    
+            <div @click="showMarketDetail = true" 
+                 class="w-full bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl p-1.5 flex items-center shadow-sm hover:shadow-md transition-all cursor-pointer group hover:bg-white/80 dark:hover:bg-slate-800/80">
+        
+                <div class="flex-shrink-0 h-9 px-3 md:px-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                     :class="{
+                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': marketInfo.risk_level === 'High',
+                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': marketInfo.risk_level === 'Medium',
+                        'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400': marketInfo.risk_level === 'Low'
+                     }">
+                     <span class="text-base font-bold">
+                        {{ marketInfo.risk_level === 'High' ? '⚡' : (marketInfo.risk_level === 'Medium' ? '🔔' : '🚀') }}
+                     </span>
+                     <span class="text-xs font-bold whitespace-nowrap">
+                        <span class="md:hidden">{{ marketInfo.sentiment }}</span>
+                        <span class="hidden md:inline">{{ marketInfo.risk_level === 'High' ? '高风险 · 防御' : (marketInfo.risk_level === 'Medium' ? '震荡市 · 轮动' : '低风险 · 进攻') }}</span>
+                     </span>
+                </div>
+        
+                <div class="w-px h-5 bg-slate-400/20 mx-3 hidden md:block"></div>
+        
+                <div class="flex-1 h-9 relative overflow-hidden mask-fade-sides">
+                    <transition-group name="news-slide" tag="div" class="relative w-full h-full">
+                        <div v-for="(news, index) in marketInfo.news" 
+                             :key="index"
+                             v-show="index === currentNewsIndex"
+                             class="absolute w-full h-full flex items-center pl-2 md:pl-0"
+                        >
+                            <span class="text-[10px] font-bold mr-2 px-1.5 py-0.5 rounded flex-shrink-0 leading-none"
+                                  :class="{
+                                    'bg-red-50 text-red-600 border border-red-100': news.type === 'bull',
+                                    'bg-green-50 text-green-600 border border-green-100': news.type === 'bear',
+                                    'bg-blue-50 text-blue-600 border border-blue-100': news.type === 'info'
+                                  }">
+                                {{ news.type === 'bull' ? '利好' : (news.type === 'bear' ? '利空' : '消息') }}
+                            </span>
+                            
+                            <span class="text-xs text-slate-600 dark:text-slate-300 truncate font-medium mt-[1px]">
+                                {{ news.content.replace(/^(利好|利空|消息)[:：]\s*/, '') }}
+                            </span>
+                        </div>
+                    </transition-group>
+                </div>
+        
+                <div class="px-3 text-slate-300 group-hover:text-indigo-500 transition-colors hidden md:flex items-center gap-1">
+                    <span class="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300">查看研报</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </div>
+            </div>
+        </div>
+        
+        
+        <el-dialog v-model="showMarketDetail" title="📊 市场研报" width="90%" style="max-width: 420px;" center class="custom-dialog" align-center append-to-body>
+            <div v-if="marketInfo" class="px-1 pb-1">
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700 flex flex-col items-center justify-center">
+                        <span class="text-[10px] text-slate-400 mb-0.5 font-bold">市场情绪</span>
+                        <span class="text-lg font-black text-slate-700 dark:text-slate-200">{{ marketInfo.sentiment }}</span>
+                    </div>
+                    <div class="rounded-xl p-3 border flex flex-col items-center justify-center"
+                         :class="{
+                            'bg-green-50 border-green-100 text-green-600': marketInfo.risk_level === 'High',
+                            'bg-amber-50 border-amber-100 text-amber-600': marketInfo.risk_level === 'Medium',
+                            'bg-rose-50 border-rose-100 text-rose-600': marketInfo.risk_level === 'Low'
+                         }">
+                        <span class="text-[10px] opacity-60 mb-0.5 font-bold">风险等级</span>
+                        <span class="text-lg font-black">
+                            {{ marketInfo.risk_level === 'High' ? '高风险' : (marketInfo.risk_level === 'Medium' ? '震荡' : '低风险') }}
+                        </span>
+                    </div>
+                </div>
+        
+                <div class="mb-3">
+                    <div class="p-2.5 rounded-lg border border-dashed border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/50 dark:bg-indigo-900/10 text-center">
+                        <p class="text-xs font-bold leading-relaxed"
+                           :class="{
+                              'text-green-600': marketInfo.risk_level === 'High',
+                              'text-amber-600': marketInfo.risk_level === 'Medium',
+                              'text-rose-500': marketInfo.risk_level === 'Low'
+                           }">
+                           “ {{ marketInfo.advice }} ”
+                        </p>
+                    </div>
+                </div>
+        
+                <div class="mb-3">
+                    <div class="flex items-center justify-between mb-1.5 px-1">
+                        <h4 class="text-xs font-bold text-slate-500 flex items-center gap-1">
+                            <span>🧠</span> AI 复盘
+                        </h4>
+                        <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500 font-medium truncate max-w-[180px]">
+                            热点：{{ marketInfo.hot_event || '无显著热点' }}
+                        </span>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl text-xs leading-relaxed text-slate-600 dark:text-slate-300 text-justify border border-slate-100 dark:border-slate-800">
+                        {{ marketInfo.analysis }}
+                    </div>
+                </div>
+        
+                <div>
+                    <h4 class="text-xs font-bold text-slate-500 mb-1.5 px-1 flex items-center gap-1">
+                        <span>📰</span> 核心消息
+                    </h4>
+                    <div class="space-y-1.5 max-h-[160px] overflow-y-auto pr-1 custom-scrollbar">
+                        <div v-for="(news, idx) in marketInfo.news" :key="idx" 
+                             class="flex items-start gap-2 text-[11px] p-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                            <span class="flex-shrink-0 px-1 py-0.5 rounded font-bold border mt-[1px] text-[10px] scale-95 origin-top-left"
+                                  :class="{
+                                    'bg-red-50 text-red-600 border-red-100': news.type === 'bull',
+                                    'bg-green-50 text-green-600 border-green-100': news.type === 'bear',
+                                    'bg-blue-50 text-blue-600 border-blue-100': news.type === 'info'
+                                  }">
+                                {{ news.type === 'bull' ? '利好' : (news.type === 'bear' ? '利空' : '消息') }}
+                            </span>
+                            <span class="text-slate-600 dark:text-slate-400 leading-relaxed">
+                                {{ news.content.replace(/^(利好|利空|消息)[:：]\s*/, '') }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+        
+            </div>
+        </el-dialog>
+        <div v-if="stocks.length" class="w-full max-w-7xl animate-fade-in-up" style="animation-delay: 0.2s;">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+                <div 
+                    v-for="stock in stocks" 
+                    :key="stock.code" 
+                    class="stock-card group" 
+                    ref="stockCards"
+                    @click="copyStockCode(stock)"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6 external-link-icon">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                    </svg>
+
+                    <div class="flex gap-2 mb-4">
+                        <template v-if="stock.tags && stock.tags.length">
+                            <span v-for="(tag, index) in stock.tags" :key="index" class="tag-pill" :class="getTagClass(index)">{{ tag }}</span>
+                        </template>
+                        <template v-else>
+                            <span class="tag-pill bg-blue-500/10 text-blue-600 dark:text-blue-400">沪深主板</span>
+                            <span class="tag-pill bg-amber-500/10 text-amber-600 dark:text-amber-400">主力异动</span>
+                            <span class="tag-pill bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">低估值</span>
+                        </template>
+                    </div>
+                    
+                    <div class="flex justify-between items-end mb-4">
+                        <div>
+                            <h3 
+                                class="text-3xl font-black tracking-tight mb-1 stock-title-link"
+                                @click.stop="goToQuote(stock.code)"
+                                title="点击查看详情"
+                            >
+                                {{ stock.name }}
+                            </h3>
+                            
+                            <div class="flex items-center gap-2 opacity-60">
+                                <span class="font-mono text-sm font-bold tracking-widest text-indigo-500 bg-indigo-500/10 px-1.5 py-0.5 rounded">{{ stock.code }}</span>
+                                <span v-if="stock.price" class="font-num text-sm font-bold tracking-tight">
+                                    <span class="inline-flex items-center justify-center px-1.5 h-5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 mr-1.5 align-middle shadow-sm transform -translate-y-[1px]">收</span>
+                                    ¥{{ stock.price }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] font-bold uppercase opacity-40 mb-1">AI 信心指数</div>
+                            <div class="text-2xl font-black transition-colors duration-300" :class="{ 'score-gradient-text': stock.score >= 90 }" :style="stock.score < 90 ? { color: getScoreColor(stock.score) } : {}">
+                                {{ stock.score }}%
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <el-progress :percentage="stock.score" :show-text="false" :stroke-width="4" :color="getScoreColor(stock.score)" class="opacity-90"></el-progress>
+
+                    <div class="reason-box">
+                        <p class="reason-text">“ {{ stock.reason }} ”</p>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="flex gap-2 items-start">
+                            <span class="relative flex h-2 w-2 mt-1.5 flex-none">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                            </span>
+                            <p class="text-[11px] leading-relaxed opacity-60 font-medium">
+                                <span class="font-bold mr-1 text-red-500/80">风险:</span>{{ stock.risk }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else class="w-full max-w-2xl animate-fade-in-up" style="animation-delay: 0.2s;">
+            <div class="empty-state-card">
+                <div class="radar-container">
+                    <div class="radar-scan"></div>
+                    <div class="radar-dot"></div>
+                </div>
+                <h3 class="text-xl font-bold opacity-80 mb-2">AI 雷达正在监测市场</h3>
+                <p class="text-sm opacity-50 text-center max-w-xs leading-relaxed">
+                    当前日期暂无策略生成。<br>请尝试切换日期，或点击“同步策略”获取最新数据。
+                </p>
+            </div>
+        </div>
+
+        <el-dialog v-model="showAdvice" title="AI 交易心法" width="340px" center class="custom-dialog" align-center>
+            <div class="px-2 pb-4">
+                <div class="space-y-3">
+                    <div class="p-3 rounded-2xl bg-indigo-50/80 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50">
+                        <h4 class="font-bold text-indigo-600 dark:text-indigo-400 mb-1 text-sm flex items-center">
+                            <span class="mr-1.5 text-lg">🚫</span> 拒绝盲目追高
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-justify">
+                            不见兔子不撒鹰。先看<b>主力资金</b>是否净流入，确认<b>成交量</b>温和放大（量比>1.5）后再跟随，避免高位接盘。
+                        </p>
+                    </div>
+                    
+                    <div class="p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50">
+                        <h4 class="font-bold text-amber-600 dark:text-amber-400 mb-1 text-sm flex items-center">
+                            <span class="mr-1.5 text-lg">🕐</span> 黄金买点：13:30
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-justify">
+                            早盘诱多陷阱多。建议<b>下午 13:30</b> 后趋势明朗再建仓或补单，不仅安全还能捕捉尾盘主力偷袭机会。
+                        </p>
+                    </div>
+
+                    <div class="p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50">
+                        <h4 class="font-bold text-emerald-600 dark:text-emerald-400 mb-1 text-sm flex items-center">
+                            <span class="mr-1.5 text-lg">💰</span> 黄金卖点：10:30
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-justify">
+                            早盘情绪最亢奋。除<b>封死涨停</b>的龙头外，建议<b>10:30 前</b>冲高时分批减仓止盈，落袋为安。
+                        </p>
+                    </div>
+
+                    <div class="p-3 rounded-2xl bg-rose-50/80 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800/50">
+                        <h4 class="font-bold text-rose-600 dark:text-rose-400 mb-1 text-sm flex items-center">
+                            <span class="mr-1.5 text-lg">🛡️</span> 严格止损
+                        </h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed text-justify">
+                            交易不是赌博。设定<b>-5% 硬性止损线</b>，破位坚决离场。留得青山在，不怕没柴烧。
+                        </p>
+                    </div>
+                </div>
+                <p class="text-[10px] text-center mt-4 opacity-40 tracking-widest">知行合一 • 顺势而为</p>
+            </div>
+        </el-dialog>
+
+        <el-dialog v-model="showGzh" title="关注 AI 狠话" width="320px" center class="custom-dialog" align-center>
+            <div class="flex flex-col items-center pb-4">
+                <div class="w-16 h-16 rounded-full overflow-hidden mb-3 border-2 border-indigo-100 cursor-pointer transition-transform hover:scale-105" @click="goToGzhArticle">
+                    <img src="assets/img/gzh_avtar.png" class="w-full h-full object-cover">
+                </div>
+                <p class="text-sm font-bold mb-1">AI 狠话 | 财经 | 搞钱</p>
+                <p class="text-xs text-gray-500 mb-4">打破信息差，先人一步</p>
+                <div class="w-48 h-48 bg-white p-1 rounded-xl shadow-inner">
+                    <img src="assets/img/gzh_qr.jpg" class="w-full h-full object-contain">
+                </div>
+                <p class="text-xs text-gray-400 mt-3 tracking-widest">长按识别二维码</p>
+            </div>
+        </el-dialog>
+
+        <el-dialog v-model="showReward" title="Flipped 的赞赏码" width="320px" center class="custom-dialog" align-center>
+            <div class="flex flex-col items-center pb-4">
+                <div class="w-16 h-16 rounded-full overflow-hidden mb-3 border-2 border-amber-100">
+                    <img src="assets/img/avtar.jpg" class="w-full h-full object-cover">
+                </div>
+                <p class="text-sm text-gray-500 italic mb-4 px-4 text-center">“ 感谢您的支持，数据将持续进化！ ”</p>
+                <div class="w-48 h-48 bg-white p-1 rounded-xl shadow-inner relative">
+                    <img src="assets/img/reward_qr.jpg" class="w-full h-full object-contain">
+                </div>
+                <p class="text-xs text-amber-500/60 mt-3 font-bold">Buy me a coffee ☕️</p>
+            </div>
+        </el-dialog>
+
+        <footer class="text-center text-[10px] tracking-[0.1em] opacity-40 font-medium mt-12 pb-4">
+            <p class="mb-2 text-[10px] md:text-xs">
+                &copy; 2026 AI 股市雷达 <br class="md:hidden" />
+                <span class="hidden md:inline"> • </span>
+                Powered by 
+                <span class="font-bold text-green-500 hover:text-green-400 transition-colors">GPT-4o</span> / 
+                <span class="font-bold text-blue-600 hover:text-blue-500 transition-colors">Qwen</span> / 
+                <span class="font-bold text-cyan-500 hover:text-cyan-400 transition-colors">DeepSeek</span> / 
+                <span class="font-bold text-indigo-500 hover:text-indigo-400 transition-colors">Gemini</span>
+            </p>
+            
+            <div class="mt-2 flex flex-col gap-1 items-center justify-center">
+                <div class="flex gap-4">
+                     <span id="busuanzi_container_site_pv" style="display:none">
+                        <span class="mr-0.5">👀</span>总访问 <span id="busuanzi_value_site_pv" class="font-num font-bold"></span> 次
+                    </span>
+                    <span id="busuanzi_container_site_uv" style="display:none">
+                        <span class="mr-0.5">👥</span>总访客 <span id="busuanzi_value_site_uv" class="font-num font-bold"></span> 人
+                    </span>
+                </div>
+
+                <div>
+                    <span class="mr-0.5">⏱️</span>已运行 <span id="site_runtime" class="font-num font-bold">{{ runtime }}</span> 天
+                </div>
+            </div>
+        </footer>
+
+    </el-config-provider>
+</div>
+
+<script src="assets/js/vue.global.prod.js"></script>
+<script src="assets/js/index.full.min.js"></script>
+<script src="assets/js/zh-cn.min.js"></script>
+
+<script>
+    const { createApp, ref, computed, watch, onMounted, nextTick, onUnmounted } = Vue;
+
+    createApp({
+        setup() {
+            const locale = ElementPlusLocaleZhCn;
+            const isDark = ref(false);
+            const selectedDate = ref(new Date().toISOString().split('T')[0]);
+            const stocks = ref([]);
+            const loading = ref(false);
+
+            const models = ['GPT-4o', 'Qwen-Max', 'DeepSeek-V3', 'Gemini Pro'];
+            const currentModelIndex = ref(0);
+            const currentModelName = computed(() => models[currentModelIndex.value]);
+
+            const marketInfo = ref(null);
+            const currentNewsIndex = ref(0); // [新增] 控制新闻轮播
+            const showMarketDetail = ref(false); // [新增] 控制详情弹窗显示
+
+            const showBannerAd = ref(false); // 控制展开/收起
+            const bannerAdLoaded = ref(false); // 标记是否已经加载过广告
+            
+            // [新增] 网站运行天数
+            const runtime = ref(0);
+
+            const showGzh = ref(false);
+            const showReward = ref(false);
+            const showAdvice = ref(false);
+            const isMobile = ref(window.innerWidth < 640);
+            
+            const toastState = ref({ show: false, icon: '', text: '' });
+            let toastTimer = null;
+            
+            const displayContent = ref({ icon: '', text: '' });
+
+            const activeIsland = computed(() => {
+                if (isMobile.value && (showAdvice.value || showGzh.value || showReward.value || showMarketDetail.value)) return true;
+                return toastState.value.show;
+            });
+
+            watch(
+                () => [isMobile.value,showAdvice.value, showGzh.value, showReward.value,showMarketDetail.value, toastState.value.show, toastState.value.text],
+                () => {
+                    if (isMobile.value && showGzh.value) {
+                        displayContent.value = { icon: '<span class="text-green-400">💬</span>', text: '正在关注 AI 狠话' };
+                    } else if (isMobile.value && showReward.value) {
+                        displayContent.value = { icon: '<span class="text-amber-400">🧡</span>', text: '感谢您的支持' };
+                    } else if (isMobile.value && showAdvice.value) {
+                        displayContent.value = { icon: '<span class="text-yellow-400">💡</span>', text: '查阅交易心法' };
+                    } else if (isMobile.value && showMarketDetail.value) {
+                        displayContent.value = { icon: '<span class="text-indigo-400">📊</span>', text: '正在阅读研报' };
+                    } else if (toastState.value.show) {
+                        displayContent.value = { icon: toastState.value.icon, text: toastState.value.text };
+                    }
+                },
+                { immediate: true }
+            );
+
+            const toggleBannerAd = () => {
+                showBannerAd.value = !showBannerAd.value;
+
+                // 核心逻辑：只有在【第一次展开】且【AdSense对象存在】时，才推送广告
+                if (showBannerAd.value && !bannerAdLoaded.value) {
+                    bannerAdLoaded.value = true; // 锁死，防止重复请求
+
+                    // nextTick 确保 DOM 已经展开，有宽度了再请求
+                    nextTick(() => {
+                        try {
+                            (window.adsbygoogle = window.adsbygoogle || []).push({});
+                        } catch (e) { console.error(e); }
+                    });
+                }
+            };
+
+            const showToast = (icon, text, duration = 2000) => {
+                if (showGzh.value || showReward.value) return;
+                
+                if (toastTimer) clearTimeout(toastTimer);
+                toastState.value = { show: true, icon, text };
+                toastTimer = setTimeout(() => { toastState.value.show = false; }, duration);
+            };
+
+            const clearToast = () => {
+                if (toastTimer) clearTimeout(toastTimer);
+                toastState.value.show = false;
+            };
+
+            const checkMobile = () => { isMobile.value = window.innerWidth < 640; };
+            window.addEventListener('resize', checkMobile);
+            onUnmounted(() => { window.removeEventListener('resize', checkMobile); });
+
+            const triggerIsland = (type) => {
+                clearToast(); 
+                if (type === 'gzh') showGzh.value = true;
+                else if (type === 'reward') showReward.value = true;
+                else if (type === 'advice') showAdvice.value = true;
+            };
+
+            const goToGzhArticle = () => {
+                window.open('https://mp.weixin.qq.com/s/4JjCjeC2ID372GtJ7fnR1A', '_blank');
+            };
+
+            const toggleTheme = () => {
+                isDark.value = !isDark.value;
+                document.documentElement.className = isDark.value ? 'dark' : '';
+                if (isMobile.value) {
+                    showToast(
+                        isDark.value ? '🌙' : '☀️', 
+                        isDark.value ? '已切换深色模式' : '已切换浅色模式'
+                    );
+                }
+            };
+
+            const copyStockCode = (stock) => {
+                navigator.clipboard.writeText(stock.code).then(() => {
+                    showToast('📍', `已复制股票：${stock.name}`);
+                }).catch(() => {
+                    showToast('📍', `已选中：${stock.name}`);
+                });
+            };
+
+            const fetchData = async (isInitialLoad = false) => {
+                if (!isInitialLoad) {
+                    showToast('🚀', '正在同步最新策略...');
+                }
+                loading.value = true;
+                try {
+                    const res = await fetch(`data/history.json?t=${Date.now()}`);
+                    if(!res.ok) throw new Error("No Data");
+                    const allData = await res.json();
+                    // [修改] 解析数据结构
+                    const currentData = allData[selectedDate.value];
+                    stocks.value = currentData?.stocks || [];
+                    marketInfo.value = currentData?.market || null; // [新增] 获取市场信息
+                    initObserver();
+                } catch (e) {
+                    stocks.value = [];
+                    marketInfo.value = null;
+                } finally {
+                    loading.value = false;
+                }
+            };
+
+            const getScoreColor = (score) => {
+                if (score >= 90) return '#8b5cf6';
+                if (score >= 80) return '#3b82f6';
+                if (score >= 70) return '#10b981';
+                if (score >= 60) return '#f59e0b';
+                return '#ef4444';
+            };
+
+            const getTagClass = (index) => {
+                const styles = ['bg-blue-500/10 text-blue-600 dark:text-blue-400', 'bg-amber-500/10 text-amber-600 dark:text-amber-400', 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'];
+                return styles[index % styles.length];
+            };
+
+            const goToQuote = (code) => {
+                let market = 'SH';
+                if (code.startsWith('6') || code.startsWith('9')) market = 'SH';
+                else if (code.startsWith('0') || code.startsWith('2') || code.startsWith('3')) market = 'SZ';
+                else if (code.startsWith('4') || code.startsWith('8')) market = 'BJ';
+                window.open(`https://xueqiu.com/S/${market}${code}`, '_blank');
+            };
+
+            const initObserver = () => {
+                const options = { root: null, rootMargin: '-45% 0px -45% 0px', threshold: 0 };
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (window.innerWidth < 1024) { 
+                            if (entry.isIntersecting) entry.target.classList.add('active-card');
+                            else entry.target.classList.remove('active-card');
+                        }
+                    });
+                }, options);
+                nextTick(() => {
+                    document.querySelectorAll('.stock-card').forEach(card => observer.observe(card));
+                });
+            };
+
+            // [新增] 自动计算运营天数
+            const calcRuntime = () => {
+                // 根据您要求的 253 天倒推，建站日期设为 2026-01-06
+                const startTime = new Date("2026-01-06T00:00:00"); 
+                const now = new Date();
+                const diff = now - startTime;
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                runtime.value = days;
+            }
+
+            onMounted(() => {
+                setTimeout(() => {
+                    const loader = document.getElementById('global-loader');
+                    if(loader) {
+                        loader.style.opacity = '0';
+                        setTimeout(() => loader.remove(), 500);
+                    }
+                }, 400);
+                setInterval(() => {
+                    currentModelIndex.value = (currentModelIndex.value + 1) % models.length;
+                }, 8000); // 每 8 秒切换一次
+                // [新增] 新闻轮播逻辑：每 3.5 秒切一条
+                setInterval(() => {
+                    if (marketInfo.value && marketInfo.value.news && marketInfo.value.news.length > 1) {
+                        currentNewsIndex.value = (currentNewsIndex.value + 1) % marketInfo.value.news.length;
+                    }
+                }, 3500);
+                // setTimeout(() => {
+                //     try {
+                //         (window.adsbygoogle = window.adsbygoogle || []).push({});
+                //     } catch (e) {
+                //         console.log('AdSense load error:', e);
+                //     }
+                // }, 1000); // 延迟 1 秒加载广告
+                fetchData(true);
+                calcRuntime(); // 执行时间计算
+                const style = document.createElement('style');
+                style.innerHTML = `@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } .animate-fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; }`;
+                document.head.appendChild(style);
+            });
+
+            return { 
+                selectedDate, stocks, loading, isDark, marketInfo, currentNewsIndex, showMarketDetail, showBannerAd, bannerAdLoaded,
+                showAdvice, showGzh, showReward, activeIsland, displayContent, isMobile, currentModelName, currentModelIndex,
+                toggleTheme, fetchData, locale, getScoreColor, getTagClass, goToQuote, toggleBannerAd,
+                triggerIsland, copyStockCode, goToGzhArticle,
+                runtime // 导出 runtime
+            };
+        }
+    }).use(ElementPlus).mount('#app');
+</script>
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+</body>
+</html>

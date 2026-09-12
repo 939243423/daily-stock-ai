@@ -1,0 +1,25 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+    <style>
+      @keyframes pulse { 0% { opacity: 0.6; r: 32; } 100% { opacity: 0; r: 80; } }
+      .radar-wave { animation: pulse 2s infinite ease-out; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" rx="128" ry="128" fill="url(#bg-gradient)"/>
+
+  <path d="M112 360 L224 248 L304 328 L400 150" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="56" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+
+  <circle cx="400" cy="150" r="32" fill="white"/>
+  
+  <circle cx="400" cy="150" r="32" fill="none" stroke="white" stroke-width="4" class="radar-wave"/>
+</svg>
